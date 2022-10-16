@@ -1,1 +1,33 @@
-<p>maze works!</p>
+<h3>Maze Q-Learning</h3>
+
+<div class="episodes">
+  <label for="episodes">Episodes</label>
+  <p-inputNumber inputId="episodes" [(ngModel)]="episodes"></p-inputNumber>
+</div>
+
+<ng-container *ngIf="(maze$ | async) as maze">
+  <div class="actions">
+    <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Start" (click)="start()"></button>
+  </div>
+
+  <div class="result">
+    <p>Episode: {{maze.episode}}</p>
+    <p>Moves: {{maze.moves}}</p>
+    <p>Wins: {{maze.wins}}</p>
+    <p>Losses: {{maze.losses}}</p>
+  </div>
+  <div class="board">
+    <div *ngFor="let column of maze.state" class="column">
+      <div *ngFor="let field of column" [ngSwitch]="field">
+        <div *ngSwitchCase="Elements.PLAYER" class="player">
+          <div class="dot"></div>
+        </div>
+        <div *ngSwitchCase="Elements.EMPTY" class="empty"></div>
+        <div *ngSwitchCase="Elements.BLOCK" class="block"></div>
+        <div *ngSwitchCase="Elements.HOLE" class="hole"></div>
+        <div *ngSwitchCase="Elements.GOAL" class="goal"></div>
+      </div>
+    </div>
+  </div>
+</ng-container>
+

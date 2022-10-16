@@ -1,4 +1,18 @@
 export interface MazeMatrixModel {
   id: string,
-  state: number[][]
+  state: Elements[][],
+  wins: number,
+  losses: number,
+  moves: number,
+  episode: number
+}
+
+export enum Elements {
+  EMPTY, PLAYER, BLOCK, HOLE, GOAL
+}
+
+
+export interface Position {
+  x: number,
+  y: number
 }

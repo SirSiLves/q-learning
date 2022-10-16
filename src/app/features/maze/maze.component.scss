@@ -1,0 +1,74 @@
+h3 {
+  margin-bottom: 2rem;
+}
+
+.episodes {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    margin-bottom: 0.25rem;
+  }
+}
+
+.actions {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.result {
+  display: flex;
+  flex-direction: row;
+
+  p {
+    margin-right: 1rem;
+  }
+}
+
+.board {
+  border-style: solid;
+  border-radius: 0.5rem;
+
+  .column {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+
+    .player,
+    .empty,
+    .block,
+    .hole,
+    .goal {
+      height: 5rem;
+      width: 5rem;
+      border-style: solid;
+    }
+
+    .block {
+      background: grey;
+    }
+
+    .goal {
+      background: green;
+    }
+
+    .hole {
+      background: red;
+    }
+
+    .player {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .dot {
+        width: 50%;
+        height: 50%;
+        border-radius: 100%;
+        background: blue;
+        border-style: solid;
+      }
+    }
+  }
+
+}
