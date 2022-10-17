@@ -14,10 +14,10 @@ export function createInitialState(): MazeMatrixState {
 export class MazeMatrixStore extends EntityStore<MazeMatrixState> {
 
   public static readonly initState = [
-    [Elements.EMPTY, Elements.EMPTY, Elements.EMPTY, Elements.GOAL],
-    [Elements.EMPTY, Elements.EMPTY, Elements.EMPTY, Elements.EMPTY],
-    [Elements.EMPTY, Elements.BLOCK, Elements.HOLE, Elements.EMPTY],
-    [Elements.PLAYER, Elements.EMPTY, Elements.EMPTY, Elements.EMPTY],
+    [Elements.EMPTY, Elements.EMPTY, Elements.GOAL, Elements.HOLE, Elements.HOLE],
+    [Elements.EMPTY, Elements.EMPTY, Elements.EMPTY, Elements.EMPTY, Elements.EMPTY],
+    [Elements.EMPTY, Elements.BLOCK, Elements.HOLE, Elements.HOLE, Elements.EMPTY],
+    [Elements.EMPTY, Elements.EMPTY, Elements.PLAYER, Elements.EMPTY, Elements.EMPTY]
   ];
 
   constructor() {

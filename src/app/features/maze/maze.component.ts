@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Action, Elements, MazeMatrixModel } from './state/maze-matrix/maze-matrix.model';
+import { Action, Elements } from './state/maze-matrix/maze-matrix.model';
 import { MazeMatrixQuery } from './state/maze-matrix/maze-matrix.query';
 import { MazeMatrixService } from './state/maze-matrix/maze-matrix.service';
 import { MazeMatrixStore } from './state/maze-matrix/maze-matrix.store';
@@ -53,14 +53,20 @@ export class MazeComponent implements OnInit {
     } else if (this.mode === 'Q') {
       this.matrixService.qLearning(this.episodes, {
         id: guid(), state: MazeMatrixStore.initState, moves: 0, wins: 0, losses: 0, episode: 0
-      });
+      }, true);
     }
+  }
+
+  test(): void {
+    this.matrixService.qLearning(this.episodes, {
+      id: guid(), state: MazeMatrixStore.initState, moves: 0, wins: 0, losses: 0, episode: 0
+    }, false);
   }
 
   getQValue(xIndex: number, yIndex: number, action: number, qTable: MazeQTableModel, state: Elements[][]): string {
     const xLength = state[yIndex].length;
-    const qColumn = qTable.values[xLength * yIndex + xIndex];
-    return qColumn[action].toString();
+    const qRow = qTable.values[xLength * yIndex + xIndex];
+    return qRow[action].toString();
   }
 
   getQActionIndex(xIndex: number, yIndex: number, actionIndex: number, state: Elements[][]): string {

@@ -1,16 +1,18 @@
 <h3>Maze Q-Learning</h3>
 
-<p-selectButton [options]="modeOptions" [(ngModel)]="mode" optionLabel="label" optionValue="value"></p-selectButton>
-
-<div class="episodes">
-  <label for="episodes">Episodes</label>
-  <p-inputNumber inputId="episodes" [(ngModel)]="episodes"></p-inputNumber>
-</div>
-
 <ng-container *ngIf="(maze$ | async) as maze">
+  <p-selectButton [disabled]="(isLoading$ | async)!" [options]="modeOptions" [(ngModel)]="mode" optionLabel="label"
+                  optionValue="value"></p-selectButton>
+
+  <div class="episodes">
+    <label for="episodes">Episodes</label>
+    <p-inputNumber inputId="episodes" [(ngModel)]="episodes"></p-inputNumber>
+  </div>
+
   <ng-container *ngIf="mode === 'Q' && (qTable$ | async) as qTable">
     <div class="actions">
-      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Start" (click)="start()"></button>
+      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Train" (click)="start()"></button>
+      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Test" (click)="test()"></button>
     </div>
 
     <div class="result">
@@ -18,6 +20,7 @@
       <p>Moves: {{maze.moves}}</p>
       <p>Wins: {{maze.wins}}</p>
       <p>Losses: {{maze.losses}}</p>
+      <p>Win-Rate: {{maze.wins / maze.episode * 100 | number}}%</p>
     </div>
     <div class="board">
       <div *ngFor="let column of maze.state; let yIndex = index" class="column">
@@ -46,7 +49,7 @@
             </div>
           </div>
           <div *ngSwitchCase="Elements.EMPTY" class="empty">
-            <div  *ngIf="showQTable" class="q-values">
+            <div *ngIf="showQTable" class="q-values">
               <div *ngFor="let action of actions; let i = index">
                 <div *ngIf="action === Action.UP" class="up">
                   {{getQValue(xIndex, yIndex, i, qTable.state, maze.state) | number}}<br>
@@ -68,7 +71,7 @@
             </div>
           </div>
           <div *ngSwitchCase="Elements.BLOCK" class="block">
-            <div  *ngIf="showQTable" class="q-values">
+            <div *ngIf="showQTable" class="q-values">
               <div *ngFor="let action of actions; let i = index">
                 <div *ngIf="action === Action.UP" class="up">
                   {{getQValue(xIndex, yIndex, i, qTable.state, maze.state) | number}}<br>
@@ -90,7 +93,7 @@
             </div>
           </div>
           <div *ngSwitchCase="Elements.HOLE" class="hole">
-            <div  *ngIf="showQTable" class="q-values">
+            <div *ngIf="showQTable" class="q-values">
               <div *ngFor="let action of actions; let i = index">
                 <div *ngIf="action === Action.UP" class="up">
                   {{getQValue(xIndex, yIndex, i, qTable.state, maze.state) | number}}<br>
@@ -112,7 +115,7 @@
             </div>
           </div>
           <div *ngSwitchCase="Elements.GOAL" class="goal">
-            <div  *ngIf="showQTable" class="q-values">
+            <div *ngIf="showQTable" class="q-values">
               <div *ngFor="let action of actions; let i = index">
                 <div *ngIf="action === Action.UP" class="up">
                   {{getQValue(xIndex, yIndex, i, qTable.state, maze.state) | number}}<br>
@@ -137,7 +140,6 @@
       </div>
     </div>
   </ng-container>
-
 
   <ng-container *ngIf="mode === 'RND'">
     <div class="actions">

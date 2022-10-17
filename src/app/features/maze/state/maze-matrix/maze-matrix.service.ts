@@ -20,7 +20,7 @@ export class MazeMatrixService {
 
   static playerPosition(state: Elements[][]): Position {
     for (let y = 0; y < state.length; y++) {
-      for (let x = 0; x < state.length; x++) {
+      for (let x = 0; x < state[y].length; x++) {
         if (state[y][x] === Elements.PLAYER) return {x, y};
       }
     }
@@ -53,9 +53,9 @@ export class MazeMatrixService {
     this.randomService.runMaze(startMatrix, episodes);
   }
 
-  qLearning(episodes: number, startMatrix: MazeMatrixModel): void {
+  qLearning(episodes: number, startMatrix: MazeMatrixModel, train: boolean): void {
     this.mazeMatrixStore.setLoading(true);
-    this.qLearningService.runMaze(startMatrix, episodes, this.mazeQTableQuery.getValue().state.values);
+    this.qLearningService.runMaze(startMatrix, episodes, this.mazeQTableQuery.getValue().state.values, train);
   }
 
 

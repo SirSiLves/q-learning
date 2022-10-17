@@ -14,16 +14,19 @@ import { MazeQTableStore } from '../state/maze-q-table/maze-q-table.store';
 export class QLearningService {
 
   private visualize: boolean = true;
-  private visualizeTimeout = 50;
+  private visualizeTimeout = 1;
 
   // Q-Learning Params
   private alpha = 0.5; // a-learning rate between 0 and 1
-  private gamma = 0.9; // y-discount factor between 0-1
+  private gamma = 0.9; // y-discount factor between 0 and 1
+  private epsilon = 0.9; // exploitation vs exploration between 0 and 1
+  private epsilonDecay = 0.001; // go slightly for more exploitation instead of exploration
+  private epsilonDecrease = true; // go slightly for more exploitation instead of exploration
 
   // Rewards
-  private rBlock = 0;
-  private rStay = 0;
-  private rHole = 0;
+  private rBlock = -0.01;
+  private rStay = -0.01;
+  private rHole = -1;
   private rGoal = 1;
 
   constructor(
@@ -34,36 +37,38 @@ export class QLearningService {
   ) {
   }
 
-  runMaze(startMatrix: MazeMatrixModel, episodes: number, qTable: number[][]): void {
+  runMaze(startMatrix: MazeMatrixModel, episodes: number, qTable: number[][], train: boolean): void {
     let state = MazeMatrixService.copyModel(startMatrix).state;
 
-    // if there is no q value available, take a random action
-    const action: Action = this.getQValueMax(qTable, state) > 0 ? this.getQValueMaxOnAction(qTable, state) : this.getRandomAction();
+    // exploitation vs exploration, if random is smaller than epsilon go for exploration
+    const random = RandomService.generateRandomNumber(0, 10) / 10;
+    const action: Action = random < this.epsilon ? this.getRandomAction() : this.getQValueMaxOnAction(qTable, state);
 
     // get reward result in chosen action
     const reward: Reward = this.executeAndGetRewards(state, action);
 
     // update Q(s,a)
-    const qValueNEW = this.calculateQValue(qTable, state, action, reward.value, reward.newState);
-    this.updateQTable(qTable, state, action, qValueNEW);
-
+    if (train) {
+      const qValueNEW = this.calculateQValue(qTable, state, action, reward.value, reward.newState);
+      this.updateQTable(qTable, state, action, qValueNEW);
+    }
 
     // call recursive
     if (episodes > 0) {
       setTimeout(() => {
         const newStartMatrix: MazeMatrixModel = {...startMatrix, state: reward.newState};
-        if (this.visualize) this.mazeMatrixStore.createNewState(newStartMatrix);
 
         // still searching through the maze
         if (!reward.done) {
           newStartMatrix.moves++;
-          this.runMaze(newStartMatrix, episodes, qTable); // TODO remove episodes - 1
+          if (this.visualize) this.mazeMatrixStore.createNewState(newStartMatrix);
+          this.runMaze(newStartMatrix, episodes, qTable, train);
         }
         // new episode
         else {
-          if (reward.value === 0) {
+          if ([this.rHole].includes(reward.value)) {
             newStartMatrix.losses++;
-          } else if (reward.value === 1) {
+          } else if ([this.rGoal].includes(reward.value)) {
             newStartMatrix.wins++;
           }
           // reset
@@ -73,7 +78,10 @@ export class QLearningService {
             episode: newStartMatrix.episode + 1
           }
 
-          this.runMaze(resetStartMatrix, episodes - 1, qTable);
+          if (this.epsilonDecrease) this.epsilon = Math.max(this.epsilon - this.epsilonDecay, 0);
+
+          if (this.visualize) this.mazeMatrixStore.createNewState(resetStartMatrix);
+          this.runMaze(resetStartMatrix, episodes - 1, qTable, train);
         }
       }, this.visualize ? this.visualizeTimeout : 0)
     } else {
@@ -180,9 +188,9 @@ export class QLearningService {
   private getQValue(qTable: number[][], state: Elements[][], action: Action): number {
     const position: Position = MazeMatrixService.playerPosition(state);
     const xIndex: number = state[position.y].length;
-    const qColumn: number[] = qTable[xIndex * position.y + position.x];
+    const qRow: number[] = qTable[xIndex * position.y + position.x];
 
-    return qColumn[action];
+    return qRow[action];
   }
 
   private updateQTable(qTable: number[][], state: Elements[][], action: Action, qValueNEW: number): void {
@@ -197,28 +205,28 @@ export class QLearningService {
 
   private getRandomAction(): Action {
     const actions: Action[] = MazeMatrixService.getActions();
-    return actions[RandomService.generateRandomNumber(0, actions.length)]
+    return actions[RandomService.generateRandomNumber(0, actions.length - 1)];
   }
 
   private getQValueMax(qTable: number[][], state: Elements[][]): number {
     const position: Position = MazeMatrixService.playerPosition(state);
     const xIndex: number = state[position.y].length;
-    const qColumn: number[] = qTable[xIndex * position.y + position.x];
+    const qRow: number[] = qTable[xIndex * position.y + position.x];
 
-    return Math.max(...qColumn);
+    return Math.max(...qRow);
   }
 
   private getQValueMaxOnAction(qTable: number[][], state: Elements[][]): Action {
     const position = MazeMatrixService.playerPosition(state);
     const xIndex = state[position.y].length;
-    const qColumn: number[] = qTable[xIndex * position.y + position.x];
+    const qRow: number[] = qTable[xIndex * position.y + position.x];
 
     let actionIndex: Action = 0;
-    let actionMax: number = qColumn[actionIndex];
+    let actionMax: number = qRow[actionIndex];
 
-    for (let i = 0; i < qColumn.length; i++) {
-      if (qColumn[i] > actionMax) {
-        actionMax = qColumn[i];
+    for (let i = 0; i < qRow.length; i++) {
+      if (qRow[i] > actionMax) {
+        actionMax = qRow[i];
         actionIndex = i;
       }
     }
