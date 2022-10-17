@@ -5,6 +5,7 @@ h3 {
 .episodes {
   display: flex;
   flex-direction: column;
+  margin-top: 2rem;
 
   label {
     margin-bottom: 0.25rem;
@@ -39,9 +40,39 @@ h3 {
     .block,
     .hole,
     .goal {
-      height: 5rem;
-      width: 5rem;
+      height: 10rem;
+      width: 10rem;
       border-style: solid;
+
+      .q-values {
+        position: relative;
+        height: 100%;
+        width: 100%;
+
+        .up {
+          position: absolute;
+          top: 0;
+          left: 40%;
+        }
+
+        .right {
+          position: absolute;
+          right: 0;
+          top: 45%;
+        }
+
+        .down {
+          position: absolute;
+          bottom: 0;
+          left: 40%;
+        }
+
+        .left {
+          position: absolute;
+          left: 0;
+          top: 45%;
+        }
+      }
     }
 
     .block {
@@ -57,16 +88,20 @@ h3 {
     }
 
     .player {
+      position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
 
       .dot {
+        position: absolute;
         width: 50%;
         height: 50%;
         border-radius: 100%;
         background: blue;
+        opacity: 0.75;
         border-style: solid;
+        z-index: 1;
       }
     }
   }

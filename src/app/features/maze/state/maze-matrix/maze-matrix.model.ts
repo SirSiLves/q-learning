@@ -16,3 +16,7 @@ export interface Position {
   x: number,
   y: number
 }
+
+export enum Action {
+  UP, RIGHT, DOWN, LEFT
+}
