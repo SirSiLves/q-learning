@@ -19,6 +19,7 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
 
   won = false;
   draw = false;
+  started = false;
 
   episodes: number = 100;
 
@@ -41,24 +42,24 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
   }
 
   setPiece(tttMatrixModel: TttMatrixModel, yIndex: number, xIndex: number): void {
-    if (this.draw ||this.won) return;
+    if (this.draw || this.won) return;
     this.tttMatrixService.updatePlay(tttMatrixModel, yIndex, xIndex);
   }
 
-  start(): void {
-    // TODO
-  }
-
-  test(): void {
+  train(): void {
     // TODO
   }
 
 
-  clear(tttMatrixModel: TttMatrixModel): void {
+  rematch(tttMatrixModel: TttMatrixModel): void {
+    this.started = !this.started;
+
     if (this.won || this.draw) {
-      this.tttMatrixService.reset(tttMatrixModel);
+      tttMatrixModel = this.tttMatrixService.reset(tttMatrixModel);
       this.won = false;
       this.draw = false;
     }
+
+    if (this.started) this.tttMatrixService.makeRandom(tttMatrixModel);
   }
 }

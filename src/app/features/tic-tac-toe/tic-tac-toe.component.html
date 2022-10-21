@@ -7,8 +7,7 @@
   </div>
 
   <div class="actions">
-    <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Train" (click)="start()"></button>
-    <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Test" (click)="test()"></button>
+    <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Train" (click)="train()"></button>
   </div>
 
   <div class="result">
@@ -40,7 +39,7 @@
       <div *ngIf="winner.winner === 2">
         <h3>O wins</h3>
       </div>
-      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Rematch" (click)="clear(ttt)"></button>
+      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Rematch" (click)="rematch(ttt)"></button>
     </ng-container>
   </ng-container>
 

@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { TttMatrixStore } from './ttt-matrix.store';
 import { Action, PlayStatus, TttMatrixModel } from './ttt-matrix.model';
+import { TttRandomService } from '../ai/ttt-random.service';
 
 @Injectable({providedIn: 'root'})
 export class TttMatrixService {
 
   constructor(
-    private tttMatrixStore: TttMatrixStore
+    private tttMatrixStore: TttMatrixStore,
+    private tttRandomService: TttRandomService
   ) {
   }
 
@@ -32,10 +34,8 @@ export class TttMatrixService {
     ];
   }
 
-
   updatePlay(tttMatrixModel: TttMatrixModel, yIndex: number, xIndex: number): void {
-    const isPlaying = this.getIsPlaying(tttMatrixModel.state); // X = 1 or O = 2
-
+    const isPlaying = TttMatrixService.getIsPlaying(tttMatrixModel.state); // X = 1 or O = 2
     let copyMatrix = TttMatrixService.copyModel(tttMatrixModel);
 
     copyMatrix.state[yIndex][xIndex] = isPlaying;
@@ -44,10 +44,15 @@ export class TttMatrixService {
       ...copyMatrix
     });
 
+    if (!TttMatrixService.winnerOrDraw(copyMatrix.state)) {
+      this.makeRandom(copyMatrix);
+    }
+
+
     this.tttMatrixStore.setLoading(false);
   }
 
-  getIsPlaying(state: number[][]): number {
+  static getIsPlaying(state: number[][]): number {
     let countX = 0;
     let countO = 0;
 
@@ -149,5 +154,65 @@ export class TttMatrixService {
     this.tttMatrixStore.setLoading(false);
 
     return copyMatrix;
+  }
+
+  makeRandom(tttMatrixModel: TttMatrixModel): void {
+    const randomMatrix = this.tttRandomService.random(tttMatrixModel);
+    this.tttMatrixStore.createNewState({
+      ...randomMatrix
+    });
+
+    this.tttMatrixStore.setLoading(false);
+  }
+
+  static tryActionWithReward(state: number[][], isPlaying: number, action: Action): number {
+    switch (action) {
+      case Action.UP_LEFT: {
+        if (state[0][0] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.UP: {
+        if (state[0][1] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.UP_RIGHT: {
+        if (state[0][2] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.MID_LEFT: {
+        if (state[1][0] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.MID: {
+        if (state[1][1] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.MID_RIGHT: {
+        if (state[1][2] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.DOWN_LEFT: {
+        if (state[2][0] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.DOWN: {
+        if (state[2][1] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+      case Action.DOWN_RIGHT: {
+        if (state[2][2] === 0) return this.checkWinWithReward(state, isPlaying);
+        else return -1;
+      }
+    }
+
+    throw new Error("Action not found for value:" + state);
+  }
+
+  private static checkWinWithReward(state: number[][], isPlaying: number): number {
+    const playStatus: PlayStatus | undefined = TttMatrixService.winnerOrDraw(state);
+
+    if (!playStatus) return 0; // still on going
+    if (playStatus.winner === isPlaying) return 10; // it's a win;
+    else return -10; // it's a loss
   }
 }
