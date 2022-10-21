@@ -6,6 +6,10 @@ import { AppComponent } from './app.component';
 import { TicTacToeComponent } from './features/tic-tac-toe/tic-tac-toe.component';
 import { MazeModule } from './features/maze/maze.module';
 import { TicTacToeModule } from './features/tic-tac-toe/tic-tac-toe.module';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { RippleModule } from 'primeng/ripple';
 
 @NgModule({
   declarations: [
@@ -16,7 +20,11 @@ import { TicTacToeModule } from './features/tic-tac-toe/tic-tac-toe.module';
     BrowserModule,
     AppRoutingModule,
     MazeModule,
-    TicTacToeModule
+    TicTacToeModule,
+    InputNumberModule,
+    FormsModule,
+    ButtonModule,
+    RippleModule
   ],
   providers: [],
   bootstrap: [AppComponent]

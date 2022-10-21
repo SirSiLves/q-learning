@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { MazeMatrixStore } from './maze-matrix.store';
 import { Action, Elements, MazeMatrixModel, Position } from './maze-matrix.model';
-import { RandomService } from '../../ai/random.service';
-import { QLearningService } from '../../ai/q-learning.service';
 import { MazeQTableQuery } from '../maze-q-table/maze-q-table.query';
+import { MazeRandomService } from '../../ai/maze-random.service';
+import { MazeQLearningService } from '../../ai/maze-q-learning.service';
 
 
 @Injectable({providedIn: 'root'})
@@ -12,8 +12,8 @@ export class MazeMatrixService {
 
   constructor(
     private mazeMatrixStore: MazeMatrixStore,
-    private randomService: RandomService,
-    private qLearningService: QLearningService,
+    private randomService: MazeRandomService,
+    private qLearningService: MazeQLearningService,
     private mazeQTableQuery: MazeQTableQuery
   ) {
   }

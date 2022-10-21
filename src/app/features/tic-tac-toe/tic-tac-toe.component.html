@@ -1,1 +1,47 @@
-<p>tic-tac-toe works!</p>
+<h3>Tic Tac Toe Deep Q-Learning</h3>
+
+<ng-container *ngIf="ttt$ | async as ttt">
+  <div class="episodes">
+    <label for="episodes">Episodes</label>
+    <p-inputNumber inputId="episodes" [(ngModel)]="episodes"></p-inputNumber>
+  </div>
+
+  <div class="actions">
+    <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Train" (click)="start()"></button>
+    <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Test" (click)="test()"></button>
+  </div>
+
+  <div class="result">
+    <p>Episode: {{ttt.episode}}</p>
+    <p>Moves: {{ttt.moves}}</p>
+    <p>Wins: {{ttt.wins}}</p>
+    <p>Losses: {{ttt.losses}}</p>
+    <p>Win-Rate: {{ttt.wins / ttt.episode * 100 | number}}%</p>
+  </div>
+
+  <div class="board">
+    <div *ngFor="let column of ttt.state; let yIndex = index" class="column">
+      <div *ngFor="let field of column; let xIndex = index" class="field">
+        <div *ngIf="field === 0" class="none" (click)="setPiece(ttt, yIndex, xIndex)"></div>
+        <div *ngIf="field === 1" class="x">X</div>
+        <div *ngIf="field === 2" class="o">O</div>
+      </div>
+    </div>
+  </div>
+
+  <ng-container *ngIf="won || draw">
+    <ng-container *ngIf="end$ | async as winner">
+      <div *ngIf="winner.draw">
+        <h3>Draw</h3>
+      </div>
+      <div *ngIf="winner.winner === 1">
+        <h3>X wins</h3>
+      </div>
+      <div *ngIf="winner.winner === 2">
+        <h3>O wins</h3>
+      </div>
+      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Rematch" (click)="clear(ttt)"></button>
+    </ng-container>
+  </ng-container>
+
+</ng-container>

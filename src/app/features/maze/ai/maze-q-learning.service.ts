@@ -4,14 +4,14 @@ import { MazeQTableService } from '../state/maze-q-table/maze-q-table.service';
 import { MazeMatrixStore } from '../state/maze-matrix/maze-matrix.store';
 import { MazeQTableQuery } from '../state/maze-q-table/maze-q-table.query';
 import { MazeMatrixService } from '../state/maze-matrix/maze-matrix.service';
-import { RandomService } from './random.service';
 import { Reward } from '../state/maze-q-table/maze-q-table.model';
 import { MazeQTableStore } from '../state/maze-q-table/maze-q-table.store';
+import { MazeRandomService } from './maze-random.service';
 
 @Injectable({
   providedIn: 'root'
 })
-export class QLearningService {
+export class MazeQLearningService {
 
   private visualize: boolean = true;
   private visualizeTimeout = 1;
@@ -41,7 +41,7 @@ export class QLearningService {
     let state = MazeMatrixService.copyModel(startMatrix).state;
 
     // exploitation vs exploration, if random is smaller than epsilon go for exploration
-    const random = RandomService.generateRandomNumber(0, 10) / 10;
+    const random = MazeRandomService.generateRandomNumber(0, 10) / 10;
     const action: Action = random < this.epsilon ? this.getRandomAction() : this.getQValueMaxOnAction(qTable, state);
 
     // get reward result in chosen action
@@ -205,7 +205,7 @@ export class QLearningService {
 
   private getRandomAction(): Action {
     const actions: Action[] = MazeMatrixService.getActions();
-    return actions[RandomService.generateRandomNumber(0, actions.length - 1)];
+    return actions[MazeRandomService.generateRandomNumber(0, actions.length - 1)];
   }
 
   private getQValueMax(qTable: number[][], state: Elements[][]): number {

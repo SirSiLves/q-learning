@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { QLearningService } from './q-learning.service';
+import { MazeQLearningService } from './q-learning.service';
 
 describe('QLearningService', () => {
-  let service: QLearningService;
+  let service: MazeQLearningService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(QLearningService);
+    service = TestBed.inject(MazeQLearningService);
   });
 
   it('should be created', () => {

@@ -6,10 +6,10 @@ import { MazeMatrixService } from '../state/maze-matrix/maze-matrix.service';
 @Injectable({
   providedIn: 'root'
 })
-export class RandomService {
+export class MazeRandomService {
 
   private visualize: boolean = true;
-  private visualizeTimeout = 50;
+  private visualizeTimeout = 1;
 
   constructor(
     private mazeMatrixStore: MazeMatrixStore,
@@ -67,8 +67,8 @@ export class RandomService {
     copiedMatrix.moves++;
 
     let startPosition: Position = MazeMatrixService.playerPosition(copiedMatrix.state);
-    let possibleFields: Position[] = RandomService.possibleFields(startPosition, copiedMatrix.state);
-    let selectedField: Position = possibleFields[RandomService.generateRandomNumber(0, possibleFields.length - 1)];
+    let possibleFields: Position[] = MazeRandomService.possibleFields(startPosition, copiedMatrix.state);
+    let selectedField: Position = possibleFields[MazeRandomService.generateRandomNumber(0, possibleFields.length - 1)];
 
     // Win or Loss
     switch (copiedMatrix.state[selectedField.y][selectedField.x]) {
