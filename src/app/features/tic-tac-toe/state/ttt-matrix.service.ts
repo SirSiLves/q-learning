@@ -2,13 +2,15 @@ import { Injectable } from '@angular/core';
 import { TttMatrixStore } from './ttt-matrix.store';
 import { Action, PlayStatus, TttMatrixModel } from './ttt-matrix.model';
 import { TttRandomService } from '../ai/ttt-random.service';
+import { TttTensorflowService } from '../ai/ttt-tensorflow.service';
 
 @Injectable({providedIn: 'root'})
 export class TttMatrixService {
 
   constructor(
     private tttMatrixStore: TttMatrixStore,
-    private tttRandomService: TttRandomService
+    private tttRandomService: TttRandomService,
+    private tttTensorflowService: TttTensorflowService
   ) {
   }
 
@@ -157,6 +159,8 @@ export class TttMatrixService {
   }
 
   makeRandom(tttMatrixModel: TttMatrixModel): void {
+    this.tttTensorflowService.start(tttMatrixModel);
+
     const randomMatrix = this.tttRandomService.random(tttMatrixModel);
     this.tttMatrixStore.createNewState({
       ...randomMatrix
