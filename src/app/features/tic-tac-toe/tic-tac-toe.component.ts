@@ -12,7 +12,6 @@ import { map, Observable, Subject, takeUntil } from 'rxjs';
 export class TicTacToeComponent implements OnInit, OnDestroy {
 
 
-
   private onDestroy$: Subject<void> = new Subject<void>();
 
   ttt$ = this.tttMatrixQuery.activeTTT$;
@@ -64,8 +63,11 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
     if (this.started) this.tttMatrixService.makeWithPredict(tttMatrixModel);
   }
 
-  uploadDQN(event: any[]): void {
-    console.log(event);
-    this.tttMatrixService.uploadDQN(event);
+  uploadDQNModel($event: any): void {
+    this.tttMatrixService.uploadDQN($event.files[0], $event.files[1])
+  }
+
+  downloadDQN(): void {
+    this.tttMatrixService.downloadDQN();
   }
 }

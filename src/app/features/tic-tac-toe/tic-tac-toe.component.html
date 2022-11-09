@@ -1,7 +1,9 @@
 <h3>Tic Tac Toe Deep Q-Learning</h3>
 
 <h5>Upload DQN Model</h5>
-<p-fileUpload [customUpload]="true" (uploadHandler)="uploadDQN($event)" [multiple]="true"></p-fileUpload>
+<p-fileUpload [customUpload]="true" (uploadHandler)="uploadDQNModel($event)" [multiple]="true"></p-fileUpload>
+<button pButton pRipple type="button" label="Download DQN-Model" (click)="downloadDQN()" class="dqn-action"></button>
+
 
 <ng-container *ngIf="ttt$ | async as ttt">
   <div class="episodes">

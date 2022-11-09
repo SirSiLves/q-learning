@@ -265,7 +265,11 @@ export class TttMatrixService {
     return state;
   }
 
-  uploadDQN(event: any[]): void {
-    this.tttTensorflowService.loadModel(event);
+  uploadDQN(model: File, weights: File): void {
+    this.tttTensorflowService.loadModel(model, weights);
+  }
+
+  downloadDQN(): void {
+    this.tttTensorflowService.downloadDQNModel();
   }
 }

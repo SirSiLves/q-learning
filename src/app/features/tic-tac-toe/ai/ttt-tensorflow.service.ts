@@ -29,6 +29,7 @@ export class TttTensorflowService {
   private readonly epsilonDecrease = false; // go slightly for more exploitation instead of exploration
   private replayBuffer: { state: number[], actions: number[] }[] = [];
   private readonly batchSize = 32;
+  private readonly modelName = 'ttt-dqn-model-1';
 
   // game variables
   private readonly NUM_BOARD_HEIGHT = 3;
@@ -88,17 +89,21 @@ export class TttTensorflowService {
 
     console.log('model created');
 
-    // tf.loadLayersModel('localstorage://test1').then(response => {
-    //   console.log(response);
-    // });
+    // try to load model from local storage
+    tf.loadLayersModel('localstorage://' + this.modelName).then(response => {
+      console.log(response);
+    });
   }
 
-  loadModel(files: any[]): void {
-    let reader = new FileReader();
-    let test = new File(files[1], files[1].name, {type: 'blob'})
-    tf.loadLayersModel(tf.io.browserFiles([files[0], test])).then(response => {
-      console.log('model loaded', response);
+  loadModel(model: File, weights: File): void {
+    tf.loadLayersModel(tf.io.browserFiles([model, weights])).then(response => {
+      console.log('model updated', response);
+      this.model.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
     });
+  }
+
+  downloadDQNModel(): void {
+    this.model.save('downloads://' + + this.modelName); // https://www.tensorflow.org/js/guide/save_load
   }
 
 
@@ -125,8 +130,7 @@ export class TttTensorflowService {
 
   train(startState: number[][], episodes: number, isPlaying: number): void {
     if (episodes <= 0) {
-      this.model.save('downloads://ttt-dqn-model'); // https://www.tensorflow.org/js/guide/save_load
-      this.model.save('localstorage://test1'); // https://www.tensorflow.org/js/guide/save_load
+      this.model.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
       return;
     }
 
@@ -327,6 +331,7 @@ export class TttTensorflowService {
   //     });
   //   });
   // }
+
 
 
 }
