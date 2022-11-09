@@ -1,5 +1,8 @@
 <h3>Tic Tac Toe Deep Q-Learning</h3>
 
+<h5>Upload DQN Model</h5>
+<p-fileUpload [customUpload]="true" (uploadHandler)="uploadDQN($event)" [multiple]="true"></p-fileUpload>
+
 <ng-container *ngIf="ttt$ | async as ttt">
   <div class="episodes">
     <label for="episodes">Episodes</label>

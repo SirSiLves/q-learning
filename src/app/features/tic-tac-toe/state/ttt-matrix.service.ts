@@ -264,4 +264,8 @@ export class TttMatrixService {
 
     return state;
   }
+
+  uploadDQN(event: any[]): void {
+    this.tttTensorflowService.loadModel(event);
+  }
 }

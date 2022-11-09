@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core';
-import { Action, TttMatrixModel } from '../state/ttt-matrix.model';
+import { Action, PlayStatus, TttMatrixModel } from '../state/ttt-matrix.model';
 import * as tf from '@tensorflow/tfjs';
-import { Tensor2D } from '@tensorflow/tfjs';
+import { Tensor, Tensor2D } from '@tensorflow/tfjs';
 import { TttMatrixStore } from '../state/ttt-matrix.store';
 import { TttMatrixService } from '../state/ttt-matrix.service';
 import { MazeRandomService } from '../../maze/ai/maze-random.service';
 import { TttRandomService } from './ttt-random.service';
+
+import * as data from 'src/assets/dqn/ttt-dqn-model.json';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +19,7 @@ export class TttTensorflowService {
   // https://www.mlq.ai/deep-reinforcement-learning-for-trading-with-tensorflow-2-0/
   // https://www.guru99.com/tensor-tensorflow.html#5
   // https://github.com/moduIo/Deep-Q-network/blob/master/DQN.ipynb
+  // https://www.datacamp.com/tutorial/investigating-tensors-pytorch
 
   // q-learning hyperparameters
   private readonly alpha = 0.3; // a-learning rate between 0 and 1
@@ -24,16 +27,19 @@ export class TttTensorflowService {
   private epsilon = 0.3; // exploitation vs exploration between 0 and 1
   private readonly epsilonDecay = 0.01; // go slightly for more exploitation instead of exploration
   private readonly epsilonDecrease = false; // go slightly for more exploitation instead of exploration
+  private replayBuffer: { state: number[], actions: number[] }[] = [];
+  private readonly batchSize = 32;
 
-  // TODO batch
-  private replayBuffer: {
-    state: Tensor2D,
-    actions: Tensor2D
-  }[] = [];
-
+  // game variables
   private readonly NUM_BOARD_HEIGHT = 3;
   private readonly NUM_BOARD_WIDTH = 3;
   private readonly NUM_MOVES = 9;
+
+  // AI learning verification
+  private aiQWins: number = 0;
+  private aiRndWins: number = 0;
+  private playedGames: number = 0;
+
 
   private tf = tf;
   private model: any;
@@ -82,7 +88,17 @@ export class TttTensorflowService {
 
     console.log('model created');
 
-    // this.model.save('downloads://my-model'); // https://www.tensorflow.org/js/guide/save_load
+    // tf.loadLayersModel('localstorage://test1').then(response => {
+    //   console.log(response);
+    // });
+  }
+
+  loadModel(files: any[]): void {
+    let reader = new FileReader();
+    let test = new File(files[1], files[1].name, {type: 'blob'})
+    tf.loadLayersModel(tf.io.browserFiles([files[0], test])).then(response => {
+      console.log('model loaded', response);
+    });
   }
 
 
@@ -93,8 +109,8 @@ export class TttTensorflowService {
     return flattedBoard;
   }
 
-  private getTensorFromState(matrix: number[]): Tensor2D {
-    return tf.tensor2d(matrix, [1, this.NUM_BOARD_HEIGHT * this.NUM_BOARD_WIDTH]);
+  private getTensorFromState(matrix: number[]): Tensor {
+    return tf.tensor(matrix, [1, this.NUM_BOARD_HEIGHT * this.NUM_BOARD_WIDTH]);
   }
 
   private async getQValuesFromState(matrix: number[][]): Promise<any> {
@@ -108,7 +124,11 @@ export class TttTensorflowService {
 
 
   train(startState: number[][], episodes: number, isPlaying: number): void {
-    if (episodes <= 0) return;
+    if (episodes <= 0) {
+      this.model.save('downloads://ttt-dqn-model'); // https://www.tensorflow.org/js/guide/save_load
+      this.model.save('localstorage://test1'); // https://www.tensorflow.org/js/guide/save_load
+      return;
+    }
 
     let state = TttMatrixService.copyState(startState);
 
@@ -129,30 +149,54 @@ export class TttTensorflowService {
       // 4. update q-value with returned reward on chosen action
       const newQValues = this.calculateQValues(qValues, reward, action, newState);
 
-      // 5. fit model with stateX and updated q-value list
-      this.updateQValues(newQValues, state).then(trainHistory => {
+      // 5.1 write move into replay buffer - increases learning performance
+      this.replayBuffer.push(this.getBatch(newQValues, state));
 
-        if (TttMatrixService.winnerOrDraw(state)) {
-          if (this.epsilonDecrease) this.epsilon = Math.max(this.epsilon - this.epsilonDecay, 0);
+      const winnerOrDraw: PlayStatus | undefined = TttMatrixService.winnerOrDraw(state);
 
-          console.log(episodes, this.epsilon, trainHistory.history.loss);
+      // 5.2 fit model with replay buffer after amount of moves
+      if (this.replayBuffer.length >= this.batchSize || episodes <= 1) {
+        this.fitQValues().then(trainHistory => {
+          if (winnerOrDraw) console.log(trainHistory);
 
-          // 6.1 go to step 1. with init state decrease episode
-          this.train(TttMatrixStore.initState, episodes - 1, isPlaying === 1 ? 2 : 1);
-
-        } else {
-          // 6.2 go to step 1. with stateX+1
-
-          if (reward === TttMatrixService.INVALID_REWARD) {
-            // it's an impossible move try one more time
-            this.train(newState, episodes, isPlaying);
-          } else {
-            newState = this.executeOpponentMove(newState, isPlaying === 1 ? 2 : 1);
-            this.train(newState, episodes, isPlaying);
-          }
-        }
-      });
+          this.nextStep(episodes, isPlaying, reward, newState, winnerOrDraw);
+        });
+      }
+      // 5.3 go further until batch size is reached
+      else {
+        this.nextStep(episodes, isPlaying, reward, newState, winnerOrDraw);
+      }
     });
+  }
+
+  private nextStep(episodes: number, isPlaying: number, reward: number, newState: number[][], winnerOrDraw: undefined | PlayStatus) {
+    if (winnerOrDraw) {
+      if (this.epsilonDecrease) this.epsilon = Math.max(this.epsilon - this.epsilonDecay, 0);
+
+      this.playedGames += 1;
+
+      if (winnerOrDraw) {
+        if (!winnerOrDraw.draw) {
+          if (winnerOrDraw.winner === isPlaying) this.aiQWins += 1;
+          else this.aiRndWins += 1;
+        }
+
+        console.log('WIN RATE from AI: ', (this.aiQWins / this.playedGames * 100), episodes);
+      }
+
+      // 6.1 go to step 1. with init state decrease episode
+      this.train(TttMatrixStore.initState, episodes - 1, isPlaying === 1 ? 2 : 1);
+
+    } else {
+      // 6.2 go to step 1. with stateX+1
+      if (reward === TttMatrixService.INVALID_REWARD) {
+        // it's an impossible move try one more time
+        this.train(newState, episodes, isPlaying);
+      } else {
+        newState = this.executeOpponentMove(newState, isPlaying === 1 ? 2 : 1);
+        this.train(newState, episodes, isPlaying);
+      }
+    }
   }
 
   private chooseActionWithEpsilonGreedy(qValues: any): Action {
@@ -188,11 +232,22 @@ export class TttTensorflowService {
     return Math.max(...prediction);
   }
 
-  private updateQValues(newQValues: number[], state: number[][]): Promise<any> {
-    const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
-    const actionQTensor = tf.tensor2d([newQValues], [1, TttMatrixService.getActions().length]);
+  private fitQValues(): Promise<any> {
+    const states: number[][] = this.replayBuffer.map(b => b.state);
+    const actions: number[][] = this.replayBuffer.map(b => b.actions);
 
-    return this.model.fit(stateTensor, actionQTensor, {epochs: 1});
+    this.replayBuffer = [];
+
+    return this.model.fit(tf.tensor2d(states), tf.tensor2d(actions), {epochs: 1, batch_size: this.batchSize});
+  }
+
+  private getBatch(newQValues: number[], state: number[][]): { state: number[], actions: number[] } {
+    const states: number[] = this.getFlattedBoard(state);
+
+    // const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
+    // const actionQTensor = tf.tensor2d([newQValues], [1, TttMatrixService.getActions().length]);
+
+    return {state: states, actions: newQValues};
   }
 
   predict(state: number[][], isPlaying: number): Action {
@@ -241,35 +296,37 @@ export class TttTensorflowService {
 
 
   // TESTING
-  test(tttMatrixModel: TttMatrixModel): void {
+  // test(tttMatrixModel: TttMatrixModel): void {
+  //
+  //   // Workflow
+  //   // 1. get q-values with predict from state1
+  //   // 2. take the action with the highest q-value
+  //   // 3. execute action
+  //   // 4. get reward from executed action
+  //   // 5. update q-value with returned reward on chosen action
+  //   // 6. fit model with state1 and updated q-value list
+  //   // 7. get q-values with predict from state2 ...
+  //   // ... go further on step 2.
+  //
+  //   let board: number[] = this.getFlattedBoard(TttMatrixStore.initState);
+  //   let x = tf.tensor2d(board, [1, 9]);
+  //
+  //   let actionValues = [0, 0, 0, 0, 0, 0, 0, 0, 0] // Q-Values for each possible action
+  //   let y = tf.tensor2d([actionValues], [1, 9]); // 9 = num of actions
+  //
+  //   this.model.fit(x, y, {epochs: 1}).then((test: any) => {
+  //     console.log('fit', test);
+  //
+  //     tf.tidy(() => {
+  //       let nextBoard: any = [];
+  //       for (let key in tttMatrixModel.state) nextBoard = nextBoard.concat(TttMatrixStore.initState[key]);
+  //       let z = tf.tensor2d(board, [1, 9]);
+  //
+  //       const pred = this.model.predict(z).dataSync(); // get q-values for each action
+  //       console.log('predict', pred);
+  //     });
+  //   });
+  // }
 
-    // Workflow
-    // 1. get q-values with predict from state1
-    // 2. take the action with the highest q-value
-    // 3. execute action
-    // 4. get reward from executed action
-    // 5. update q-value with returned reward on chosen action
-    // 6. fit model with state1 and updated q-value list
-    // 7. get q-values with predict from state2 ...
-    // ... go further on step 2.
 
-    let board: number[] = this.getFlattedBoard(TttMatrixStore.initState);
-    let x = tf.tensor2d(board, [1, 9]);
-
-    let actionValues = [0, 0, 0, 0, 0, 0, 0, 0, 0] // Q-Values for each possible action
-    let y = tf.tensor2d([actionValues], [1, 9]); // 9 = num of actions
-
-    this.model.fit(x, y, {epochs: 1}).then((test: any) => {
-      console.log('fit', test);
-
-      tf.tidy(() => {
-        let nextBoard: any = [];
-        for (let key in tttMatrixModel.state) nextBoard = nextBoard.concat(TttMatrixStore.initState[key]);
-        let z = tf.tensor2d(board, [1, 9]);
-
-        const pred = this.model.predict(z).dataSync(); // get q-values for each action
-        console.log('predict', pred);
-      });
-    });
-  }
 }
