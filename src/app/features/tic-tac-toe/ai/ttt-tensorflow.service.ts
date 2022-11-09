@@ -1,13 +1,11 @@
 import { Injectable } from '@angular/core';
-import { Action, PlayStatus, TttMatrixModel } from '../state/ttt-matrix.model';
+import { Action, PlayStatus } from '../state/ttt-matrix.model';
 import * as tf from '@tensorflow/tfjs';
-import { Tensor, Tensor2D } from '@tensorflow/tfjs';
+import { Tensor } from '@tensorflow/tfjs';
 import { TttMatrixStore } from '../state/ttt-matrix.store';
 import { TttMatrixService } from '../state/ttt-matrix.service';
 import { MazeRandomService } from '../../maze/ai/maze-random.service';
 import { TttRandomService } from './ttt-random.service';
-
-import * as data from 'src/assets/dqn/ttt-dqn-model.json';
 import { guid } from '@datorama/akita';
 
 @Injectable({
@@ -106,7 +104,7 @@ export class TttTensorflowService {
   }
 
   downloadDQNModel(): void {
-    this.model.save('downloads://' + + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+    this.model.save('downloads://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
   }
 
 
