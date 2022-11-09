@@ -18,6 +18,6 @@ export enum Action {
 
 
 export interface PlayStatus {
-  winner?: number,
+  winner?: number, // X = 1 or O = 2
   draw?: boolean
 }

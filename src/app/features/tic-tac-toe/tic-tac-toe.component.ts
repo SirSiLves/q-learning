@@ -47,9 +47,8 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
   }
 
   train(): void {
-    // TODO
+    this.tttMatrixService.train(this.episodes);
   }
-
 
   rematch(tttMatrixModel: TttMatrixModel): void {
     this.started = !this.started;
@@ -60,6 +59,6 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
       this.draw = false;
     }
 
-    if (this.started) this.tttMatrixService.makeRandom(tttMatrixModel);
+    if (this.started) this.tttMatrixService.makeWithPredict(tttMatrixModel);
   }
 }

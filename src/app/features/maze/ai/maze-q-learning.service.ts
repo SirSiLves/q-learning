@@ -16,7 +16,7 @@ export class MazeQLearningService {
   private visualize: boolean = true;
   private visualizeTimeout = 1;
 
-  // Q-Learning Params
+  // q-learning hyperparameters
   private alpha = 0.5; // a-learning rate between 0 and 1
   private gamma = 0.9; // y-discount factor between 0 and 1
   private epsilon = 0.9; // exploitation vs exploration between 0 and 1

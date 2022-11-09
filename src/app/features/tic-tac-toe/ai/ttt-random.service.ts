@@ -17,7 +17,7 @@ export class TttRandomService {
     const actionsRewards: { action: Action, reward: number }[] = TttMatrixService.getActions().map(action => {
       return {
         action: action,
-        reward: TttMatrixService.tryActionWithReward(
+        reward: TttMatrixService.getActionReward(
           matrixModel.state, isPlaying, action
         )
       }
@@ -25,8 +25,26 @@ export class TttRandomService {
 
     const filteredActionRewards = actionsRewards.filter(ar => ar.reward !== -1); // filter impossible moves
     const chosenAction = filteredActionRewards[TttRandomService.generateRandomNumber(0, filteredActionRewards.length - 1)];
-    this.doAction(copyMatrix.state, chosenAction, isPlaying);
+    TttMatrixService.doAction(copyMatrix.state, chosenAction.action, isPlaying);
     return copyMatrix;
+  }
+
+  static makeRandomAction(state: number[][], isPlaying: number): number[][] {
+    let copyState = TttMatrixService.copyState(state);
+
+    const actionsRewards: { action: Action, reward: number }[] = TttMatrixService.getActions().map(action => {
+      return {
+        action: action,
+        reward: TttMatrixService.getActionReward(
+          state, isPlaying, action
+        )
+      }
+    });
+
+    const filteredActionRewards = actionsRewards.filter(ar => ar.reward !== -1); // filter impossible moves
+    const chosenAction = filteredActionRewards[TttRandomService.generateRandomNumber(0, filteredActionRewards.length - 1)];
+    TttMatrixService.doAction(copyState, chosenAction.action, isPlaying);
+    return copyState;
   }
 
 
@@ -36,18 +54,5 @@ export class TttRandomService {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  private doAction(state: number[][], chosenAction: { action: Action; reward: number }, isPlaying: number): number[][] {
-    if (chosenAction.action === Action.UP_LEFT) state[0][0] = isPlaying;
-    else if (chosenAction.action === Action.UP) state[0][1] = isPlaying;
-    else if (chosenAction.action === Action.UP_RIGHT) state[0][2] = isPlaying;
-    else if (chosenAction.action === Action.MID_LEFT) state[1][0] = isPlaying;
-    else if (chosenAction.action === Action.MID) state[1][1] = isPlaying;
-    else if (chosenAction.action === Action.MID_RIGHT) state[1][2] = isPlaying;
-    else if (chosenAction.action === Action.DOWN_LEFT) state[2][0] = isPlaying;
-    else if (chosenAction.action === Action.DOWN) state[2][1] = isPlaying;
-    else if (chosenAction.action === Action.DOWN_RIGHT) state[2][2] = isPlaying;
-    else throw new Error("Could not find chosen action" + chosenAction);
 
-    return state;
-  }
 }

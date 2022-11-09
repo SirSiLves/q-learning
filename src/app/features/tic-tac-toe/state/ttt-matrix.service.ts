@@ -7,6 +7,8 @@ import { TttTensorflowService } from '../ai/ttt-tensorflow.service';
 @Injectable({providedIn: 'root'})
 export class TttMatrixService {
 
+  public static readonly INVALID_REWARD = -100;
+
   constructor(
     private tttMatrixStore: TttMatrixStore,
     private tttRandomService: TttRandomService,
@@ -47,7 +49,7 @@ export class TttMatrixService {
     });
 
     if (!TttMatrixService.winnerOrDraw(copyMatrix.state)) {
-      this.makeRandom(copyMatrix);
+      this.makeWithPredict(copyMatrix);
     }
 
 
@@ -159,8 +161,6 @@ export class TttMatrixService {
   }
 
   makeRandom(tttMatrixModel: TttMatrixModel): void {
-    this.tttTensorflowService.start(tttMatrixModel);
-
     const randomMatrix = this.tttRandomService.random(tttMatrixModel);
     this.tttMatrixStore.createNewState({
       ...randomMatrix
@@ -169,43 +169,69 @@ export class TttMatrixService {
     this.tttMatrixStore.setLoading(false);
   }
 
-  static tryActionWithReward(state: number[][], isPlaying: number, action: Action): number {
+  makeWithPredict(tttMatrixModel: TttMatrixModel): void {
+    const isPlaying = TttMatrixService.getIsPlaying(tttMatrixModel.state); // X = 1 or O = 2
+    const action = this.tttTensorflowService.predict(tttMatrixModel.state, isPlaying);
+
+    let copyMatrix = TttMatrixService.copyModel(tttMatrixModel);
+    let newState = TttMatrixService.doAction(copyMatrix.state, action, isPlaying);
+
+    this.tttMatrixStore.createNewState({
+      ...copyMatrix,
+      state: newState
+    });
+
+    this.tttMatrixStore.setLoading(false);
+  }
+
+  static getActionReward(state: number[][], isPlaying: number, action: Action): number {
+    const end = TttMatrixService.winnerOrDraw(state);
+    if (end) {
+      if (end.draw) return 0;
+      if (end.winner === isPlaying) {
+        return 10;
+      } else {
+        return -10;
+      }
+    }
+
+
     switch (action) {
       case Action.UP_LEFT: {
         if (state[0][0] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.UP: {
         if (state[0][1] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.UP_RIGHT: {
         if (state[0][2] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.MID_LEFT: {
         if (state[1][0] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.MID: {
         if (state[1][1] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.MID_RIGHT: {
         if (state[1][2] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.DOWN_LEFT: {
         if (state[2][0] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.DOWN: {
         if (state[2][1] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
       case Action.DOWN_RIGHT: {
         if (state[2][2] === 0) return this.checkWinWithReward(state, isPlaying);
-        else return -1;
+        else return TttMatrixService.INVALID_REWARD;
       }
     }
 
@@ -218,5 +244,24 @@ export class TttMatrixService {
     if (!playStatus) return 0; // still on going
     if (playStatus.winner === isPlaying) return 10; // it's a win;
     else return -10; // it's a loss
+  }
+
+  train(episodes: number): void {
+    this.tttTensorflowService.train(TttMatrixStore.initState, episodes, 1); // isPlaying 1 = X & 2 = O
+  }
+
+  static doAction(state: number[][], chosenAction: Action, isPlaying: number): number[][] {
+    if (chosenAction === Action.UP_LEFT) state[0][0] = isPlaying;
+    else if (chosenAction === Action.UP) state[0][1] = isPlaying;
+    else if (chosenAction === Action.UP_RIGHT) state[0][2] = isPlaying;
+    else if (chosenAction === Action.MID_LEFT) state[1][0] = isPlaying;
+    else if (chosenAction === Action.MID) state[1][1] = isPlaying;
+    else if (chosenAction === Action.MID_RIGHT) state[1][2] = isPlaying;
+    else if (chosenAction === Action.DOWN_LEFT) state[2][0] = isPlaying;
+    else if (chosenAction === Action.DOWN) state[2][1] = isPlaying;
+    else if (chosenAction === Action.DOWN_RIGHT) state[2][2] = isPlaying;
+    else throw new Error("Could not find chosen action" + chosenAction);
+
+    return state;
   }
 }
