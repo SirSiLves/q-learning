@@ -8,6 +8,7 @@ import { MazeRandomService } from '../../maze/ai/maze-random.service';
 import { TttRandomService } from './ttt-random.service';
 
 import * as data from 'src/assets/dqn/ttt-dqn-model.json';
+import { guid } from '@datorama/akita';
 
 @Injectable({
   providedIn: 'root'
@@ -37,15 +38,17 @@ export class TttTensorflowService {
   private readonly NUM_MOVES = 9;
 
   // AI learning verification
-  private aiQWins: number = 0;
-  private aiRndWins: number = 0;
-  private playedGames: number = 0;
+  public aiQWins: number = 0;
+  public aiRndWins: number = 0;
+  public playedGames: number = 0;
 
 
   private tf = tf;
   private model: any;
 
-  constructor() {
+  constructor(
+    private tttMatrixStore: TttMatrixStore
+  ) {
     this.buildModel();
   }
 
@@ -185,7 +188,15 @@ export class TttTensorflowService {
           else this.aiRndWins += 1;
         }
 
-        console.log('WIN RATE from AI: ', (this.aiQWins / this.playedGames * 100), episodes);
+        this.tttMatrixStore.createNewState({
+          id: guid(),
+          episode: this.playedGames,
+          state: TttMatrixStore.initState,
+          wins: this.aiQWins,
+          losses: this.playedGames - this.aiQWins,
+          moves: 0
+        })
+        // console.log('WIN RATE from AI: ', (this.aiQWins / this.playedGames * 100), episodes);
       }
 
       // 6.1 go to step 1. with init state decrease episode

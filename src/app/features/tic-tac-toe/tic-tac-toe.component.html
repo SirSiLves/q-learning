@@ -1,10 +1,5 @@
 <h3>Tic Tac Toe Deep Q-Learning</h3>
 
-<h5>Upload DQN Model</h5>
-<p-fileUpload [customUpload]="true" (uploadHandler)="uploadDQNModel($event)" [multiple]="true"></p-fileUpload>
-<button pButton pRipple type="button" label="Download DQN-Model" (click)="downloadDQN()" class="dqn-action"></button>
-
-
 <ng-container *ngIf="ttt$ | async as ttt">
   <div class="episodes">
     <label for="episodes">Episodes</label>
@@ -17,10 +12,9 @@
 
   <div class="result">
     <p>Episode: {{ttt.episode}}</p>
-    <p>Moves: {{ttt.moves}}</p>
     <p>Wins: {{ttt.wins}}</p>
     <p>Losses: {{ttt.losses}}</p>
-    <p>Win-Rate: {{ttt.wins / ttt.episode * 100 | number}}%</p>
+    <p>Win-Rate: {{ttt.wins / ttt.episode * 100 | number : '1.0-2'}}%</p>
   </div>
 
   <div class="board">
@@ -44,8 +38,14 @@
       <div *ngIf="winner.winner === 2">
         <h3>O wins</h3>
       </div>
-      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Rematch" (click)="rematch(ttt)"></button>
+      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Rematch"
+              (click)="rematch(ttt)"></button>
     </ng-container>
   </ng-container>
 
 </ng-container>
+
+
+<h5>Upload DQN Model</h5>
+<p-fileUpload [customUpload]="true" (uploadHandler)="uploadDQNModel($event)" [multiple]="true"></p-fileUpload>
+<button pButton pRipple type="button" label="Download DQN-Model" (click)="downloadDQN()" class="dqn-action"></button>
