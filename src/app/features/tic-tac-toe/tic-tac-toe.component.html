@@ -14,7 +14,8 @@
     <p>Episode: {{ttt.episode}}</p>
     <p>Wins: {{ttt.wins}}</p>
     <p>Losses: {{ttt.losses}}</p>
-    <p>Win-Rate: {{ttt.wins / ttt.episode * 100 | number : '1.0-2'}}%</p>
+    <p>Draws: {{ttt.episode - ttt.wins - ttt.losses}}</p>
+    <p>Win-Rate: {{(ttt.wins + ttt.episode - ttt.wins - ttt.losses) / ttt.episode * 100 | number : '1.0-2'}}%</p>
   </div>
 
   <div class="board">

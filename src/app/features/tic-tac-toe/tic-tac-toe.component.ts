@@ -22,7 +22,7 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
   draw = false;
   started = false;
 
-  episodes: number = 100;
+  episodes: number = 1000;
 
   constructor(
     private tttMatrixQuery: TttMatrixQuery,

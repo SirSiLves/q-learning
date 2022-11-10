@@ -24,9 +24,9 @@ export class TttTensorflowService {
   // q-learning hyperparameters
   private readonly alpha = 0.3; // a-learning rate between 0 and 1
   private readonly gamma = 0.9; // y-discount factor between 0 and 1
-  private epsilon = 0.3; // exploitation vs exploration between 0 and 1
-  private readonly epsilonDecay = 0.01; // go slightly for more exploitation instead of exploration
-  private readonly epsilonDecrease = false; // go slightly for more exploitation instead of exploration
+  private epsilon = 0.9; // exploitation vs exploration between 0 and 1
+  private readonly epsilonDecay = 0.001; // go slightly for more exploitation instead of exploration
+  private readonly epsilonDecrease = true; // go slightly for more exploitation instead of exploration
   private replayBuffer: { state: number[], actions: number[] }[] = [];
   private readonly batchSize = 32;
   private readonly modelName = 'ttt-dqn-model-1';
@@ -39,6 +39,7 @@ export class TttTensorflowService {
   // AI learning verification
   public aiQWins: number = 0;
   public aiRndWins: number = 0;
+  public draws: number = 0;
   public playedGames: number = 0;
 
 
@@ -64,14 +65,14 @@ export class TttTensorflowService {
 
     this.model.add(
       tf.layers.dense({
-        units: 200,
+        units: 64,
         activation: 'relu'
       })
     );
 
     this.model.add(
       tf.layers.dense({
-        units: 200,
+        units: 64,
         activation: 'relu'
       })
     );
@@ -79,7 +80,7 @@ export class TttTensorflowService {
     this.model.add(
       tf.layers.dense({
         units: this.NUM_MOVES, // num of actions
-        activation: 'sigmoid'
+        activation: 'softmax'
       })
     );
 
@@ -134,6 +135,7 @@ export class TttTensorflowService {
   train(startState: number[][], episodes: number, isPlaying: number): void {
     if (episodes <= 0) {
       this.model.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+      this.tttMatrixStore.setLoading(false);
       return;
     }
 
@@ -142,11 +144,12 @@ export class TttTensorflowService {
     // 1. get q-values with predict from stateX
     this.getQValuesFromState(state).then((qValues: any) => {
 
-      // 2. take the action with the highest q-value
-      const action: Action = this.chooseActionWithEpsilonGreedy(qValues);
+      // 2. take the possible action with the highest q-value
+      const action: Action = this.chooseActionWithEpsilonGreedy(qValues, state, isPlaying);
 
       // 3. execute action && get reward from executed action
       const reward = TttMatrixService.getActionReward(state, isPlaying, action);
+
       let newState = TttMatrixService.copyState(state);
       if (reward !== TttMatrixService.INVALID_REWARD) {
         // execute action only if it is a valid action
@@ -155,6 +158,7 @@ export class TttTensorflowService {
 
       // 4. update q-value with returned reward on chosen action
       const newQValues = this.calculateQValues(qValues, reward, action, newState);
+      // console.log(reward, qValues, newQValues, state, action);
 
       // 5.1 write move into replay buffer - increases learning performance
       this.replayBuffer.push(this.getBatch(newQValues, state));
@@ -162,23 +166,18 @@ export class TttTensorflowService {
       const winnerOrDraw: PlayStatus | undefined = TttMatrixService.winnerOrDraw(state);
 
       // 5.2 fit model with replay buffer after amount of moves
-      if (this.replayBuffer.length >= this.batchSize || episodes <= 1) {
-        this.fitQValues().then(trainHistory => {
-          if (winnerOrDraw) console.log(trainHistory);
+      this.fitQValues().then(trainHistory => {
+        if (winnerOrDraw) console.log(trainHistory, this.epsilon);
 
-          this.nextStep(episodes, isPlaying, reward, newState, winnerOrDraw);
-        });
-      }
-      // 5.3 go further until batch size is reached
-      else {
         this.nextStep(episodes, isPlaying, reward, newState, winnerOrDraw);
-      }
+      });
     });
   }
 
   private nextStep(episodes: number, isPlaying: number, reward: number, newState: number[][], winnerOrDraw: undefined | PlayStatus) {
     if (winnerOrDraw) {
       if (this.epsilonDecrease) this.epsilon = Math.max(this.epsilon - this.epsilonDecay, 0);
+      // console.log(this.epsilon);
 
       this.playedGames += 1;
 
@@ -186,6 +185,8 @@ export class TttTensorflowService {
         if (!winnerOrDraw.draw) {
           if (winnerOrDraw.winner === isPlaying) this.aiQWins += 1;
           else this.aiRndWins += 1;
+        } else {
+          this.draws += 1;
         }
 
         this.tttMatrixStore.createNewState({
@@ -193,7 +194,7 @@ export class TttTensorflowService {
           episode: this.playedGames,
           state: TttMatrixStore.initState,
           wins: this.aiQWins,
-          losses: this.playedGames - this.aiQWins,
+          losses: this.playedGames - this.aiQWins - this.draws,
           moves: 0
         })
         // console.log('WIN RATE from AI: ', (this.aiQWins / this.playedGames * 100), episodes);
@@ -214,18 +215,26 @@ export class TttTensorflowService {
     }
   }
 
-  private chooseActionWithEpsilonGreedy(qValues: any): Action {
+  private chooseActionWithEpsilonGreedy(qValues: any, state: number[][], isPlaying: number): Action {
     const actions: Action[] = TttMatrixService.getActions();
+
+    const actionsRewards: { action: Action, reward: number }[] = actions.map(action => {
+      return {
+        action: action,
+        reward: TttMatrixService.getActionReward(state, isPlaying, action)
+      }
+    });
 
     // exploitation vs exploration, if random is smaller than epsilon go for exploration
     const random = MazeRandomService.generateRandomNumber(0, 10) / 10; // between 0 & 1
 
     if (random < this.epsilon) {
       // take random move
-      return actions[MazeRandomService.generateRandomNumber(0, actions.length - 1)];
+      const filteredActionRewards = actionsRewards.filter(ar => ar.reward !== TttMatrixService.INVALID_REWARD); // filter impossible moves
+      return filteredActionRewards[MazeRandomService.generateRandomNumber(0, filteredActionRewards.length - 1)].action;
     } else {
-      // take best move
-      return this.getQMaxAction(actions, qValues);
+      // take best move - action and q values must have the same length
+      return this.getQMaxAction(actionsRewards, qValues);
     }
   }
 
@@ -234,7 +243,7 @@ export class TttTensorflowService {
     const qMaxWithNewState = this.getQValueMaxFromState(newState);
     const newQValue = oldQValue + this.alpha * (reward + this.gamma * qMaxWithNewState - oldQValue);
 
-    const newQValues = [...qValues];
+    let newQValues = [...qValues];
     newQValues[action] = newQValue;
 
     return newQValues;
@@ -243,6 +252,8 @@ export class TttTensorflowService {
   private getQValueMaxFromState(newState: number[][]): number {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(newState));
     const prediction = this.model.predict(stateTensor).dataSync();
+
+    // TODO filter all impossible actions after prediction
 
     return Math.max(...prediction);
   }
@@ -268,7 +279,10 @@ export class TttTensorflowService {
   predict(state: number[][], isPlaying: number): Action {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
     const actionQValues = this.model.predict(stateTensor).dataSync();
-    const bestAction = this.getQMaxAction(TttMatrixService.getActions(), actionQValues);
+    const actionsRewards: { action: Action, reward: number }[] = TttMatrixService.getActions().map(action => {
+      return { action: action, reward: TttMatrixService.getActionReward(state, isPlaying, action)}
+    });
+    const bestAction = this.getQMaxAction(actionsRewards, actionQValues);
 
     console.log('PREDICT', actionQValues, bestAction, TttMatrixService.getActionReward(state, isPlaying, bestAction));
 
@@ -291,18 +305,18 @@ export class TttTensorflowService {
     return bestAction;
   }
 
-  private getQMaxAction(actions: Action[], qValues: number[]): Action {
+  private getQMaxAction(actions: { action: Action; reward: number }[], qValues: number[]): Action {
     let actionIndex: Action = 0;
-    let actionMax: number = qValues[actionIndex];
+    let actionQMax: number = qValues[actionIndex];
 
     for (let i = 0; i < qValues.length; i++) {
-      if (qValues[i] > actionMax) {
-        actionMax = actions[i];
+      if (qValues[i] > actionQMax && actions[i].reward !== TttMatrixService.INVALID_REWARD) {
+        actionQMax = qValues[i];
         actionIndex = i;
       }
     }
 
-    return actions[actionIndex];
+    return actions.map(ar => ar.action)[actionIndex];
   }
 
   private executeOpponentMove(newState: number[][], isPlaying: number) {
@@ -342,7 +356,6 @@ export class TttTensorflowService {
   //     });
   //   });
   // }
-
 
 
 }
