@@ -19,6 +19,7 @@ export class TttTensorflowService {
   // https://www.guru99.com/tensor-tensorflow.html#5
   // https://github.com/moduIo/Deep-Q-network/blob/master/DQN.ipynb
   // https://www.datacamp.com/tutorial/investigating-tensors-pytorch
+  // https://github.com/tensorflow/tfjs/tree/master/tfjs-backend-webgpu
 
   // q-learning hyperparameters
   private readonly alpha = 0.3; // a-learning rate between 0 and 1
@@ -94,6 +95,7 @@ export class TttTensorflowService {
     tf.loadLayersModel('localstorage://' + this.modelName).then(response => {
       console.log(response);
     });
+
   }
 
   loadModel(model: File, weights: File): void {
