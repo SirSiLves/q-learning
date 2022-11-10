@@ -16,6 +16,11 @@ export enum Action {
   UP_LEFT, UP, UP_RIGHT, MID_LEFT, MID, MID_RIGHT, DOWN_LEFT, DOWN, DOWN_RIGHT
 }
 
+export interface RewardState {
+  state: number[][],
+  reward: number,
+  winnerOrDraw?: PlayStatus
+}
 
 export interface PlayStatus {
   winner?: number, // X = 1 or O = 2

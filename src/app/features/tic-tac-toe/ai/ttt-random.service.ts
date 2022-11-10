@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Action, TttMatrixModel } from '../state/ttt-matrix.model';
 import { TttMatrixService } from '../state/ttt-matrix.service';
+import { MazeRandomService } from '../../maze/ai/maze-random.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,39 +13,21 @@ export class TttRandomService {
 
   random(matrixModel: TttMatrixModel): TttMatrixModel {
     const isPlaying = TttMatrixService.getIsPlaying(matrixModel.state); // X = 1 or O = 2
-    let copyMatrix = TttMatrixService.copyModel(matrixModel);
 
-    const actionsRewards: { action: Action, reward: number }[] = TttMatrixService.getActions().map(action => {
-      return {
-        action: action,
-        reward: TttMatrixService.getActionReward(
-          matrixModel.state, isPlaying, action
-        )
-      }
-    });
+    const availableActions = TttMatrixService.getAvailableActions(matrixModel.state);
+    const action = availableActions[MazeRandomService.generateRandomNumber(0, availableActions.length - 1)];
 
-    const filteredActionRewards = actionsRewards.filter(ar => ar.reward !== -1); // filter impossible moves
-    const chosenAction = filteredActionRewards[TttRandomService.generateRandomNumber(0, filteredActionRewards.length - 1)];
-    TttMatrixService.doAction(copyMatrix.state, chosenAction.action, isPlaying);
-    return copyMatrix;
+    return {
+      ...matrixModel,
+      state: TttMatrixService.doAction(matrixModel.state, action, isPlaying)
+    };
   }
 
   static makeRandomAction(state: number[][], isPlaying: number): number[][] {
-    let copyState = TttMatrixService.copyState(state);
+    const availableActions = TttMatrixService.getAvailableActions(state);
+    const action = availableActions[MazeRandomService.generateRandomNumber(0, availableActions.length - 1)];
 
-    const actionsRewards: { action: Action, reward: number }[] = TttMatrixService.getActions().map(action => {
-      return {
-        action: action,
-        reward: TttMatrixService.getActionReward(
-          state, isPlaying, action
-        )
-      }
-    });
-
-    const filteredActionRewards = actionsRewards.filter(ar => ar.reward !== -1); // filter impossible moves
-    const chosenAction = filteredActionRewards[TttRandomService.generateRandomNumber(0, filteredActionRewards.length - 1)];
-    TttMatrixService.doAction(copyState, chosenAction.action, isPlaying);
-    return copyState;
+    return TttMatrixService.doAction(state, action, isPlaying);
   }
 
 
