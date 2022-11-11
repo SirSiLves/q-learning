@@ -20,15 +20,18 @@ export class TttTensorflowService {
   // https://github.com/moduIo/Deep-Q-network/blob/master/DQN.ipynb
   // https://www.datacamp.com/tutorial/investigating-tensors-pytorch
   // https://github.com/tensorflow/tfjs/tree/master/tfjs-backend-webgpu
+  // https://the-mvm.github.io/deep-q-learning-tic-tac-toe.html
+  // https://gretel.ai/gretel-synthetics-faqs/how-many-epochs-should-i-train-my-model-with
 
   // q-learning hyperparameters
   private readonly alpha = 0.3; // a-learning rate between 0 and 1
   private readonly gamma = 0.9; // y-discount factor between 0 and 1
-  private epsilon = 0.9; // exploitation vs exploration between 0 and 1
-  private readonly epsilonDecay = 0.0001; // go slightly for more exploitation instead of exploration
-  private readonly epsilonDecrease = true; // go slightly for more exploitation instead of exploration
+  private epsilon = 0.22; // exploitation vs exploration between 0 and 1
+  private readonly epsilonDecay = 0.000001; // go slightly for more exploitation instead of exploration
+  private readonly epsilonDecrease = false; // go slightly for more exploitation instead of exploration
   private replayBuffer: { state: number[], actions: number[] }[] = [];
   private readonly batchSize = 32;
+  private readonly epochs = this.batchSize * 3; // 3 times number for elements of batch samples, the validation loss going to increase that means overfitting than reduce epochs
   private readonly modelName = 'ttt-dqn-model-1';
 
   // game variables
@@ -89,6 +92,8 @@ export class TttTensorflowService {
       loss: tf.losses.meanSquaredError,
       metrics: ['mse']
     });
+
+    // tf.variableGrads(tf.losses.meanSquaredError());
 
     console.log('model created');
 
@@ -153,7 +158,9 @@ export class TttTensorflowService {
       }
 
       // 3. execute action && get reward from executed action
-      const {reward, state: newState, winnerOrDraw}: RewardState = TttMatrixService.executeActionWithReward(state, isPlaying, action);
+      const {
+        reward, state: newState, winnerOrDraw
+      }: RewardState = TttMatrixService.executeActionWithReward(state, isPlaying, action);
 
       // 4. update q-value with returned reward on chosen action
       const newQValues = this.calculateQValues(qValues, reward, action, newState);
@@ -229,7 +236,7 @@ export class TttTensorflowService {
     const qMaxWithNewState = this.getQValueMaxFromState(newState);
     const newQValue = oldQValue + this.alpha * (reward + this.gamma * qMaxWithNewState - oldQValue);
 
-    let newQValues = [...qValues];
+    const newQValues = [...qValues];
     newQValues[action] = newQValue;
 
     return newQValues;
@@ -238,6 +245,7 @@ export class TttTensorflowService {
   private getQValueMaxFromState(newState: number[][]): number {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(newState));
     const prediction: number[] = this.model.predict(stateTensor).dataSync();
+
 
     // const availableActions: Action[] = TttMatrixService.getAvailableActions(newState);
     // if (availableActions.length <= 0) {
@@ -250,11 +258,11 @@ export class TttTensorflowService {
 
   private fitQValues(): Promise<any> {
     const states: number[][] = this.replayBuffer.map(b => b.state);
-    const actions: number[][] = this.replayBuffer.map(b => b.actions);
+    const actionQValues: number[][] = this.replayBuffer.map(b => b.actions);
 
     this.replayBuffer = [];
 
-    return this.model.fit(tf.tensor2d(states), tf.tensor2d(actions), {epochs: 1, batch_size: this.batchSize});
+    return this.model.fit(tf.tensor2d(states), tf.tensor2d(actionQValues), {epochs: this.epochs, batch_size: this.batchSize});
   }
 
   private getBatch(newQValues: number[], state: number[][]): { state: number[], actions: number[] } {
@@ -270,7 +278,7 @@ export class TttTensorflowService {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
     const actionQValues = this.model.predict(stateTensor).dataSync();
     const availableActions: Action[] = TttMatrixService.getAvailableActions(state);
-    console.log('PREDICT', actionQValues, this.getQMaxAction(availableActions, actionQValues));
+    console.log('PREDICT', actionQValues, availableActions, this.getQMaxAction(availableActions, actionQValues));
 
     return this.getQMaxAction(availableActions, actionQValues);
   }
@@ -284,7 +292,7 @@ export class TttTensorflowService {
 
       if (qValues[availableAction] > actionQMax) {
         actionIndex = i;
-        actionQMax = qValues[actionIndex];
+        actionQMax = qValues[availableActions[actionIndex]];
       }
     }
 

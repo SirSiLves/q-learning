@@ -290,7 +290,7 @@ export class TttMatrixService {
     const opponentWinOrDraw: PlayStatus | undefined = TttMatrixService.winnerOrDraw(stateAfterOpponent);
     if (opponentWinOrDraw) {
       const rewardState = this.getReward(opponentWinOrDraw, stateAfterOpponent, isPlaying === 1 ? 2 : 1);
-      rewardState.reward = rewardState.reward * -1; // set negative score because opponent has won
+      rewardState.reward = opponentWinOrDraw.draw ? rewardState.reward : rewardState.reward * -1; // set negative score because opponent has won
       return {
         ...rewardState,
         winnerOrDraw: opponentWinOrDraw
@@ -307,7 +307,7 @@ export class TttMatrixService {
   private static getReward(end: PlayStatus, stateAfterAction: number[][], isPlaying: number): RewardState {
     if (end.draw) return {
       state: stateAfterAction,
-      reward: 0
+      reward: 5
     } // it's a draw
     if (end.winner === isPlaying) return {
       state: stateAfterAction,

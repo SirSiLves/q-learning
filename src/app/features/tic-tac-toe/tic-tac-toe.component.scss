@@ -28,9 +28,11 @@ h3 {
 .result {
   display: flex;
   flex-direction: row;
+  max-width: 3 * 10rem;
 
   p {
     margin-right: 1rem;
+    white-space: nowrap;
   }
 }
 
