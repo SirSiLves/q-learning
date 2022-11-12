@@ -290,7 +290,7 @@ export class TttMatrixService {
     const opponentWinOrDraw: PlayStatus | undefined = TttMatrixService.winnerOrDraw(stateAfterOpponent);
     if (opponentWinOrDraw) {
       const rewardState = this.getReward(opponentWinOrDraw, stateAfterOpponent, isPlaying === 1 ? 2 : 1);
-      rewardState.reward = opponentWinOrDraw.draw ? rewardState.reward : rewardState.reward * -1; // set negative score because opponent has won
+      rewardState.reward = opponentWinOrDraw.winner !== isPlaying ? rewardState.reward * -1 : rewardState.reward; // set negative score because opponent has won
       return {
         ...rewardState,
         winnerOrDraw: opponentWinOrDraw
@@ -317,5 +317,9 @@ export class TttMatrixService {
       state: stateAfterAction,
       reward: -10
     }; // it's a loss
+  }
+
+  test(episodes: number): void {
+    this.tttTensorflowService.test(TttMatrixStore.initState, episodes, 1);
   }
 }

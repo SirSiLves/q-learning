@@ -9,6 +9,7 @@
 
     <div class="actions">
       <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Train" (click)="train()"></button>
+      <button [disabled]="isLoading$ | async" pButton pRipple type="button" label="Test" (click)="test()"></button>
     </div>
 
     <div class="result">
@@ -16,7 +17,7 @@
       <p>Wins: {{ttt.wins}}</p>
       <p>Losses: {{ttt.losses}}</p>
       <p>Draws: {{ttt.episode - ttt.wins - ttt.losses}}</p>
-      <p>Win-Rate: {{(ttt.wins + ttt.episode - ttt.wins - ttt.losses) / ttt.episode * 100 | number : '1.0-2'}}%</p>
+      <p>Win-Rate: {{(ttt.wins) / (ttt.episode - (ttt.episode - ttt.wins - ttt.losses)) * 100 | number : '1.0-2'}}%</p>
     </div>
 
     <div class="board">

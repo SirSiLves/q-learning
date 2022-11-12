@@ -70,4 +70,8 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
   downloadDQN(): void {
     this.tttMatrixService.downloadDQN();
   }
+
+  test(): void {
+    this.tttMatrixService.test(this.episodes);
+  }
 }
