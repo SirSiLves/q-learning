@@ -22,17 +22,21 @@ export class TttTensorflowService {
   // https://github.com/tensorflow/tfjs/tree/master/tfjs-backend-webgpu
   // https://the-mvm.github.io/deep-q-learning-tic-tac-toe.html
   // https://gretel.ai/gretel-synthetics-faqs/how-many-epochs-should-i-train-my-model-with
+  // https://ai.stackexchange.com/questions/34589/using-softmax-non-linear-vs-linear-activation-function-in-deep-reinforceme
+  // http://iliasmirnov.com/ttt/
 
   // q-learning hyperparameters
   private readonly alpha = 0.3; // a-learning rate between 0 and 1
   private readonly gamma = 0.5; // y-discount factor between 0 and 1 - gammas should correspond to the size of observation space: you should use larger gammas (ie closer to 1) for big state spaces, and smaller gammas for smaller spaces.
   private epsilon = 0.9; // exploitation vs exploration between 0 and 1
-  private readonly epsilonDecay = 0.0001; // go slightly for more exploitation instead of exploration
+  private readonly epsilonDecay = 0.00001; // go slightly for more exploitation instead of exploration
   private readonly epsilonDecrease = true; // go slightly for more exploitation instead of exploration
   private replayBuffer: { state: number[], actions: number[] }[] = [];
-  private readonly batchSize = 64;
-  private readonly epochs = 50; // the validation loss going to increase that means overfitting than reduce epochs
+  private readonly batchSize = 1024;
+  private readonly epochs = 3 * 3; // the validation loss going to increase that means overfitting than reduce epochs
   private readonly modelName = 'ttt-dqn-model-1';
+  private readonly targetUpdateInterval = 5120;
+  private targetUpdateValue = this.targetUpdateInterval;
 
   // game variables
   private readonly NUM_BOARD_HEIGHT = 3;
@@ -47,18 +51,38 @@ export class TttTensorflowService {
 
 
   private tf = tf;
-  private model: any;
+  private learningModel: any;
+  private targetModel: any;
 
   constructor(
     private tttMatrixStore: TttMatrixStore
   ) {
-    this.buildModel();
+    this.initializeModels();
   }
 
-  private buildModel(): void {
-    // define network-model
-    this.model = this.tf.sequential();
-    this.model.add(
+  private initializeModels(): void {
+    // try to load model from local storage
+    tf.loadLayersModel('localstorage://' + this.modelName).then(response => {
+      this.learningModel = response;
+      this.targetModel = this.buildModel();
+
+      this.syncNetworksWeights();
+      this.compileNetworks();
+      console.log('MODEL loaded');
+
+    }).catch(error => {
+      console.error('MODEL not loaded from storage. New one will be created', error);
+      this.learningModel = this.buildModel();
+      this.targetModel = this.buildModel();
+
+      this.compileNetworks();
+    });
+  }
+
+  private buildModel(): any {
+    // define and get network-model
+    const model = this.tf.sequential();
+    model.add(
       tf.layers.dense({
         inputShape: [this.NUM_BOARD_HEIGHT * this.NUM_BOARD_WIDTH], // concated board size, single array of board
         units: 9,
@@ -66,52 +90,66 @@ export class TttTensorflowService {
       })
     );
 
-    this.model.add(
+    model.add(
       tf.layers.dense({
-        units: 200,
+        units: 128,
         activation: 'relu'
       })
     );
 
-    this.model.add(
+    model.add(
       tf.layers.dense({
-        units: 200,
+        units: 128,
         activation: 'relu'
       })
     );
 
-    this.model.add(
+    model.add(
       tf.layers.dense({
-        units: this.NUM_MOVES, // num of actions
+        units: this.NUM_MOVES, // num of actions,
+        activation: 'linear'
       })
     );
 
-    this.model.compile({
-      optimizer: this.tf.train.adam(0.001),
+    return model;
+  }
+
+  private syncNetworksWeights(): void {
+    for (let i = 0; i < this.learningModel.layers.length; i++) {
+      this.targetModel.layers[i].setWeights(this.learningModel.layers[i].getWeights());
+    }
+
+    console.log('Target network updated');
+  }
+
+  private compileNetworks(): void {
+    this.learningModel.compile({
+      optimizer: this.tf.train.adam(),
       loss: tf.losses.meanSquaredError,
       metrics: ['mse']
     });
 
-    // tf.variableGrads(tf.losses.meanSquaredError());
-
-    console.log('model created');
-
-    // try to load model from local storage
-    tf.loadLayersModel('localstorage://' + this.modelName).then(response => {
-      console.log(response);
+    this.targetModel.compile({
+      optimizer: this.tf.train.adam(),
+      loss: tf.losses.meanSquaredError,
+      metrics: ['mse']
     });
-
   }
+
 
   loadModel(model: File, weights: File): void {
     tf.loadLayersModel(tf.io.browserFiles([model, weights])).then(response => {
+      this.learningModel = response;
+      this.targetModel = this.buildModel();
+      this.syncNetworksWeights();
+
+      this.learningModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
       console.log('model updated', response);
-      this.model.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
     });
   }
 
   downloadDQNModel(): void {
-    this.model.save('downloads://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+    this.learningModel.save('downloads://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
   }
 
 
@@ -131,14 +169,15 @@ export class TttTensorflowService {
 
     return tf.tidy(() => {
       // get q-values for each action
-      return this.model.predict(tensor).dataSync();
+      return this.targetModel.predict(tensor).dataSync();
     });
   }
 
 
   train(startState: number[][], episodes: number, isPlaying: number): void {
     if (episodes <= 0) {
-      this.model.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+      this.syncNetworksWeights();
+      this.learningModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
       this.tttMatrixStore.setLoading(false);
       console.log('END');
       return;
@@ -170,8 +209,8 @@ export class TttTensorflowService {
       // 6.1 fit model with replay buffer after amount of moves
       if (this.replayBuffer.length >= this.batchSize || episodes <= 1) {
         this.fitQValues().then(trainHistory => {
-          if (winnerOrDraw) console.log(trainHistory, this.epsilon);
-          this.model.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+          console.log(trainHistory.history.loss[0], trainHistory.history.mse[0], this.epsilon, trainHistory)
+          this.learningModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
 
           // console.log(
           //   'GAMES: ' + this.playedGames,
@@ -221,6 +260,13 @@ export class TttTensorflowService {
       this.draws += 1;
     }
 
+    this.targetUpdateValue -= 1;
+
+    if (this.targetUpdateValue <= 0) {
+      this.syncNetworksWeights();
+      this.targetUpdateValue = this.targetUpdateInterval;
+    }
+
     // 6.1 go to step 1. with init state decrease episode
     this.train(TttMatrixStore.initState, episodes - 1, isPlaying === 1 ? 2 : 1);
   }
@@ -252,7 +298,7 @@ export class TttTensorflowService {
 
   private getQValueMaxFromState(newState: number[][]): number {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(newState));
-    const prediction: number[] = this.model.predict(stateTensor).dataSync();
+    const prediction: number[] = this.targetModel.predict(stateTensor).dataSync();
 
     const availableActions: Action[] = TttMatrixService.getAvailableActions(newState);
     if (availableActions.length <= 0) {
@@ -271,9 +317,9 @@ export class TttTensorflowService {
 
     this.replayBuffer = [];
 
-    return this.model.fit(tf.tensor2d(states), tf.tensor2d(actionQValues), {
+    return this.learningModel.fit(tf.tensor2d(states), tf.tensor2d(actionQValues), {
       epochs: this.epochs,
-      batch_size: this.batchSize
+      batch_size: states.length
     });
   }
 
@@ -288,7 +334,7 @@ export class TttTensorflowService {
 
   predict(state: number[][]): Action {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
-    const actionQValues = this.model.predict(stateTensor).dataSync();
+    const actionQValues = this.targetModel.predict(stateTensor).dataSync();
     const availableActions: Action[] = TttMatrixService.getAvailableActions(state);
     console.log('PREDICT', actionQValues, availableActions, this.getQMaxAction(availableActions, actionQValues));
 

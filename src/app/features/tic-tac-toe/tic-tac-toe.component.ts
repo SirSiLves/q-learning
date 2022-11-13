@@ -72,6 +72,6 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
   }
 
   test(): void {
-    this.tttMatrixService.test(this.episodes);
+    this.tttMatrixService.test(1000);
   }
 }

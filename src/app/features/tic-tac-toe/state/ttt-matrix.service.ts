@@ -7,8 +7,6 @@ import { TttTensorflowService } from '../ai/ttt-tensorflow.service';
 @Injectable({providedIn: 'root'})
 export class TttMatrixService {
 
-  public static readonly INVALID_REWARD = -100;
-
   constructor(
     private tttMatrixStore: TttMatrixStore,
     private tttRandomService: TttRandomService,
