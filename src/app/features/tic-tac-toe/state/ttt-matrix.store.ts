@@ -11,7 +11,7 @@ export function createInitialState(): TttMatrixState {
 }
 
 @Injectable({providedIn: 'root'})
-@StoreConfig({name: 'ttt-matrix'})
+@StoreConfig({name: 'ttt-matrix', resettable: true})
 export class TttMatrixStore extends EntityStore<TttMatrixState> {
 
   public static readonly initState = [

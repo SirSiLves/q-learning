@@ -3,6 +3,7 @@ import { TttMatrixStore } from './ttt-matrix.store';
 import { Action, RewardState, PlayStatus, TttMatrixModel } from './ttt-matrix.model';
 import { TttRandomService } from '../ai/ttt-random.service';
 import { TttTensorflowService } from '../ai/ttt-tensorflow.service';
+import { guid } from '@datorama/akita';
 
 @Injectable({providedIn: 'root'})
 export class TttMatrixService {
@@ -245,6 +246,17 @@ export class TttMatrixService {
   }
 
   train(episodes: number): void {
+    this.tttMatrixStore.reset();
+    this.tttTensorflowService.reset();
+    this.tttMatrixStore.createNewState({
+      id: guid(),
+      episode: episodes,
+      state: TttMatrixStore.initState,
+      wins: 0,
+      losses: 0,
+      moves: 0
+    });
+
     this.tttTensorflowService.train(TttMatrixStore.initState, episodes, 1); // isPlaying 1 = X & 2 = O
   }
 
@@ -305,7 +317,7 @@ export class TttMatrixService {
   private static getReward(end: PlayStatus, stateAfterAction: number[][], isPlaying: number): RewardState {
     if (end.draw) return {
       state: stateAfterAction,
-      reward: 5
+      reward: 0
     } // it's a draw
     if (end.winner === isPlaying) return {
       state: stateAfterAction,
@@ -318,6 +330,17 @@ export class TttMatrixService {
   }
 
   test(episodes: number): void {
+    this.tttMatrixStore.reset();
+    this.tttTensorflowService.reset();
+    this.tttMatrixStore.createNewState({
+      id: guid(),
+      episode: episodes,
+      state: TttMatrixStore.initState,
+      wins: 0,
+      losses: 0,
+      moves: 0
+    });
+
     this.tttTensorflowService.test(TttMatrixStore.initState, episodes, 1);
   }
 }
