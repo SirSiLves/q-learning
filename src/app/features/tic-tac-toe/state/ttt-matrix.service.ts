@@ -325,7 +325,7 @@ export class TttMatrixService {
     } // it's a win;
     else return {
       state: stateAfterAction,
-      reward: -10
+      reward: -25
     }; // it's a loss
   }
 

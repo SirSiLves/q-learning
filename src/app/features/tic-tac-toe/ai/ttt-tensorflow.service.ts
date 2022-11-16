@@ -52,7 +52,7 @@ export class TttTensorflowService {
 
   private tf = tf;
   private learningModel: any;
-  // private targetModel: any;
+  private targetModel: any;
   private optimizer: any;
 
   constructor(
@@ -65,7 +65,7 @@ export class TttTensorflowService {
     // try to load model from local storage
     tf.loadLayersModel('localstorage://' + this.modelName).then(response => {
       this.learningModel = response;
-      // this.targetModel = this.buildModel();
+      this.targetModel = this.buildModel();
 
       this.syncNetworksWeights();
       this.compileNetworks();
@@ -74,7 +74,7 @@ export class TttTensorflowService {
     }).catch(error => {
       console.error('MODEL not loaded from storage. New one will be created', error);
       this.learningModel = this.buildModel();
-      // this.targetModel = this.buildModel();
+      this.targetModel = this.buildModel();
 
       this.compileNetworks();
     });
@@ -116,11 +116,11 @@ export class TttTensorflowService {
   }
 
   private syncNetworksWeights(): void {
-    // for (let i = 0; i < this.learningModel.layers.length; i++) {
-    //   this.targetModel.layers[i].setWeights(this.learningModel.layers[i].getWeights());
-    // }
+    for (let i = 0; i < this.learningModel.layers.length; i++) {
+      this.targetModel.layers[i].setWeights(this.learningModel.layers[i].getWeights());
+    }
 
-    this.learningModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+    this.targetModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
     console.log('dqn saved');
   }
 
@@ -133,27 +133,27 @@ export class TttTensorflowService {
       metrics: ['mse']
     });
 
-    // this.targetModel.compile({
-    //   optimizer: this.optimizer,
-    //   loss: tf.losses.meanSquaredError,
-    //   metrics: ['mse']
-    // });
+    this.targetModel.compile({
+      optimizer: this.optimizer,
+      loss: tf.losses.meanSquaredError,
+      metrics: ['mse']
+    });
   }
 
 
   loadModel(model: File, weights: File): void {
     tf.loadLayersModel(tf.io.browserFiles([model, weights])).then(response => {
       this.learningModel = response;
-      // this.targetModel = this.buildModel();
+      this.targetModel = this.buildModel();
       this.syncNetworksWeights();
 
-      this.learningModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+      this.targetModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
       console.log('model updated', response);
     });
   }
 
   downloadDQNModel(): void {
-    this.learningModel.save('downloads://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
+    this.targetModel.save('downloads://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
   }
 
 
@@ -173,7 +173,7 @@ export class TttTensorflowService {
 
     return tf.tidy(() => {
       // get q-values for each action
-      return this.learningModel.predict(tensor).dataSync();
+      return this.targetModel.predict(tensor).dataSync();
     });
   }
 
@@ -191,7 +191,6 @@ export class TttTensorflowService {
         moves: 0
       });
 
-      this.learningModel.save('localstorage://' + this.modelName); // https://www.tensorflow.org/js/guide/save_load
       this.tttMatrixStore.setLoading(false);
       console.log('END');
       return;
@@ -313,7 +312,7 @@ export class TttTensorflowService {
 
   private getQValueMaxFromState(newState: number[][]): number {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(newState));
-    const prediction: number[] = this.learningModel.predict(stateTensor).dataSync();
+    const prediction: number[] = this.targetModel.predict(stateTensor).dataSync();
 
     const availableActions: Action[] = TttMatrixService.getAvailableActions(newState);
     if (availableActions.length <= 0) {
@@ -362,7 +361,7 @@ export class TttTensorflowService {
 
   predict(state: number[][]): Action {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
-    const actionQValues = this.learningModel.predict(stateTensor).dataSync();
+    const actionQValues = this.targetModel.predict(stateTensor).dataSync();
     const availableActions: Action[] = TttMatrixService.getAvailableActions(state);
     console.log('PREDICT', actionQValues, availableActions, this.getQMaxAction(availableActions, actionQValues));
 
