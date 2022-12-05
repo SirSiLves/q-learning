@@ -53,6 +53,7 @@ export class TttTensorflowService {
   private tf = tf;
   private learningModel: any;
   private targetModel: any;
+  private playingModel: any;
   private optimizer: any;
 
   constructor(
@@ -66,15 +67,20 @@ export class TttTensorflowService {
     tf.loadLayersModel('localstorage://' + this.modelName).then(response => {
       this.learningModel = response;
       this.targetModel = this.buildModel();
+      this.playingModel = this.buildModel();
+
+      this.compileNetworks();
 
       this.syncNetworksWeights();
-      this.compileNetworks();
+      this.syncPlayingNetworksWeights();
+
       console.log('MODEL loaded');
 
     }).catch(error => {
       console.error('MODEL not loaded from storage. New one will be created', error);
       this.learningModel = this.buildModel();
       this.targetModel = this.buildModel();
+      this.playingModel = this.buildModel();
 
       this.compileNetworks();
     });
@@ -124,6 +130,12 @@ export class TttTensorflowService {
     console.log('dqn saved');
   }
 
+  private syncPlayingNetworksWeights(): void {
+    for (let i = 0; i < this.learningModel.layers.length; i++) {
+      this.playingModel.layers[i].setWeights(this.learningModel.layers[i].getWeights());
+    }
+  }
+
   private compileNetworks(): void {
     this.optimizer = tf.train.adam(0.0001)
 
@@ -134,6 +146,12 @@ export class TttTensorflowService {
     });
 
     this.targetModel.compile({
+      optimizer: this.optimizer,
+      loss: tf.losses.meanSquaredError,
+      metrics: ['mse']
+    });
+
+    this.playingModel.compile({
       optimizer: this.optimizer,
       loss: tf.losses.meanSquaredError,
       metrics: ['mse']
@@ -181,6 +199,7 @@ export class TttTensorflowService {
   train(startState: number[][], episodes: number, isPlaying: number): void {
     if (episodes <= 0) {
       this.syncNetworksWeights();
+      //this.syncPlayingNetworksWeights();
 
       this.tttMatrixStore.createNewState({
         id: guid(),
@@ -192,6 +211,7 @@ export class TttTensorflowService {
       });
 
       this.tttMatrixStore.setLoading(false);
+
       console.log('END');
       return;
     }
@@ -211,7 +231,11 @@ export class TttTensorflowService {
       // 3. execute action && get reward from executed action
       const {
         reward, state: newState, winnerOrDraw
-      }: RewardState = TttMatrixService.executeActionWithReward(state, isPlaying, action);
+      }: RewardState = this.executeActionWithReward(state, isPlaying, action);
+
+      // const {
+      //   reward, state: newState, winnerOrDraw
+      // }: RewardState = TttMatrixService.executeActionWithReward(state, isPlaying, action);
 
       // 4. update q-value with returned reward on chosen action - set 0 to terminal state
       const newQValues = this.calculateQValues(qValues, reward, action, newState, winnerOrDraw);
@@ -361,9 +385,9 @@ export class TttTensorflowService {
 
   predict(state: number[][]): Action {
     const stateTensor = this.getTensorFromState(this.getFlattedBoard(state));
-    const actionQValues = this.targetModel.predict(stateTensor).dataSync();
+    const actionQValues = this.playingModel.predict(stateTensor).dataSync();
     const availableActions: Action[] = TttMatrixService.getAvailableActions(state);
-    console.log('PREDICT', actionQValues, availableActions, this.getQMaxAction(availableActions, actionQValues));
+    // console.log('PREDICT', actionQValues, availableActions, this.getQMaxAction(availableActions, actionQValues));
 
     return this.getQMaxAction(availableActions, actionQValues);
   }
@@ -490,4 +514,38 @@ export class TttTensorflowService {
   // }
 
 
+  executeActionWithReward(state: number[][], isPlaying: number, action: Action): RewardState {
+    const stateAfterAction = TttMatrixService.doAction(state, action, isPlaying);
+    const aiWinOrDraw: PlayStatus | undefined = TttMatrixService.winnerOrDraw(stateAfterAction);
+    if (aiWinOrDraw) {
+      const rewardState = TttMatrixService.getReward(aiWinOrDraw, stateAfterAction, isPlaying);
+      return {
+        ...rewardState,
+        winnerOrDraw: aiWinOrDraw
+      };
+    }
+
+    const stateAfterOpponent: number[][] = this.makeDQNAction(stateAfterAction, isPlaying === 1 ? 2 : 1);
+    const opponentWinOrDraw: PlayStatus | undefined = TttMatrixService.winnerOrDraw(stateAfterOpponent);
+    if (opponentWinOrDraw) {
+      const rewardState = TttMatrixService.getReward(opponentWinOrDraw, stateAfterOpponent, isPlaying === 1 ? 2 : 1);
+      rewardState.reward = opponentWinOrDraw.winner !== isPlaying ? rewardState.reward * -1 : rewardState.reward; // set negative score because opponent has won
+      return {
+        ...rewardState,
+        winnerOrDraw: opponentWinOrDraw
+      };
+    }
+
+    return {
+      state: stateAfterOpponent,
+      reward: 0,
+      winnerOrDraw: undefined
+    }; // game is still on going
+  }
+
+  private makeDQNAction(stateAfterAction: number[][], isPlaying: number): number[][] {
+    const action = this.predict(stateAfterAction);
+    let copyState = TttMatrixService.copyState(stateAfterAction);
+    return TttMatrixService.doAction(copyState, action, isPlaying);
+  }
 }

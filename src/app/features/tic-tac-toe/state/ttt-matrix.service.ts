@@ -314,7 +314,7 @@ export class TttMatrixService {
     }; // game is still on going
   }
 
-  private static getReward(end: PlayStatus, stateAfterAction: number[][], isPlaying: number): RewardState {
+  static getReward(end: PlayStatus, stateAfterAction: number[][], isPlaying: number): RewardState {
     if (end.draw) return {
       state: stateAfterAction,
       reward: 0
