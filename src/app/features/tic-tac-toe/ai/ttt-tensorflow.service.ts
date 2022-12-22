@@ -305,6 +305,9 @@ export class TttTensorflowService {
 
     }
 
+
+    // console.log('Tensors afters:', tf.memory().numTensors);
+
     // 6.1 go to step 1. with init state decrease episode
     this.train(TttMatrixStore.initState, episodes - 1, isPlaying === 1 ? 2 : 1);
   }
