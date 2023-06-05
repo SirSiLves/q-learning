@@ -4,10 +4,19 @@
   <p-selectButton [disabled]="(isLoading$ | async)!" [options]="modeOptions" [(ngModel)]="mode" optionLabel="label"
                   optionValue="value"></p-selectButton>
 
-  <div class="episodes">
-    <label for="episodes">Episodes</label>
-    <p-inputNumber inputId="episodes" [(ngModel)]="episodes"></p-inputNumber>
+  <div class="numbers">
+    <div class="episodes">
+      <label for="episodes">Episodes</label>
+      <p-inputNumber inputId="episodes" [(ngModel)]="episodes"></p-inputNumber>
+    </div>
+
+    <div class="visualizeTimeout">
+      <label for="visualizeTimeout">Visualize Timer</label>
+      <p-inputNumber inputId="visualizeTimeout" [(ngModel)]="visualizeTimeout"></p-inputNumber>
+    </div>
   </div>
+
+
 
   <ng-container *ngIf="mode === 'Q' && (qTable$ | async) as qTable">
     <div class="actions">

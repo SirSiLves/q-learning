@@ -48,14 +48,14 @@ export class MazeMatrixService {
     ];
   }
 
-  random(episodes: number, startMatrix: MazeMatrixModel): void {
+  random(episodes: number, startMatrix: MazeMatrixModel, visualizeTimeout: number): void {
     this.mazeMatrixStore.setLoading(true);
-    this.randomService.runMaze(startMatrix, episodes);
+    this.randomService.runMaze(startMatrix, episodes, visualizeTimeout);
   }
 
-  qLearning(episodes: number, startMatrix: MazeMatrixModel, train: boolean): void {
+  qLearning(episodes: number, startMatrix: MazeMatrixModel, train: boolean, visualizeTimeout: number): void {
     this.mazeMatrixStore.setLoading(true);
-    this.qLearningService.runMaze(startMatrix, episodes, this.mazeQTableQuery.getValue().state.values, train);
+    this.qLearningService.runMaze(startMatrix, episodes, this.mazeQTableQuery.getValue().state.values, train, visualizeTimeout);
   }
 
 

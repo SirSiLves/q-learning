@@ -9,7 +9,6 @@ import { MazeMatrixService } from '../state/maze-matrix/maze-matrix.service';
 export class MazeRandomService {
 
   private visualize: boolean = true;
-  private visualizeTimeout = 1;
 
   constructor(
     private mazeMatrixStore: MazeMatrixStore,
@@ -60,7 +59,7 @@ export class MazeRandomService {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  runMaze(startMatrix: MazeMatrixModel, episodes: number): void {
+  runMaze(startMatrix: MazeMatrixModel, episodes: number, visualizeTimeout: number): void {
     let copiedMatrix = MazeMatrixService.copyModel(startMatrix);
     let running = true;
 
@@ -100,7 +99,7 @@ export class MazeRandomService {
 
         // still searching through the maze
         if (running) {
-          this.runMaze(copiedMatrix, episodes);
+          this.runMaze(copiedMatrix, episodes, visualizeTimeout);
         }
         // new episode
         else {
@@ -110,9 +109,9 @@ export class MazeRandomService {
             state: MazeMatrixStore.initState,
             episode: copiedMatrix.episode + 1
           }
-          this.runMaze(copiedMatrix, episodes - 1);
+          this.runMaze(copiedMatrix, episodes - 1, visualizeTimeout);
         }
-      }, this.visualize ? this.visualizeTimeout : 0);
+      }, this.visualize ? visualizeTimeout : 0);
     } else {
       this.mazeMatrixStore.createNewState(startMatrix);
       this.mazeMatrixStore.setLoading(false);

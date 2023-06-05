@@ -14,7 +14,6 @@ import { MazeRandomService } from './maze-random.service';
 export class MazeQLearningService {
 
   private visualize: boolean = true;
-  private visualizeTimeout = 1;
 
   // q-learning hyperparameters
   private alpha = 0.5; // a-learning rate between 0 and 1
@@ -37,7 +36,7 @@ export class MazeQLearningService {
   ) {
   }
 
-  runMaze(startMatrix: MazeMatrixModel, episodes: number, qTable: number[][], train: boolean): void {
+  runMaze(startMatrix: MazeMatrixModel, episodes: number, qTable: number[][], train: boolean, visualizeTimeout: number): void {
     let state = MazeMatrixService.copyModel(startMatrix).state;
 
     // exploitation vs exploration, if random is smaller than epsilon go for exploration
@@ -62,7 +61,7 @@ export class MazeQLearningService {
         if (!reward.done) {
           newStartMatrix.moves++;
           if (this.visualize) this.mazeMatrixStore.createNewState(newStartMatrix);
-          this.runMaze(newStartMatrix, episodes, qTable, train);
+          this.runMaze(newStartMatrix, episodes, qTable, train, visualizeTimeout);
         }
         // new episode
         else {
@@ -81,9 +80,9 @@ export class MazeQLearningService {
           if (this.epsilonDecrease) this.epsilon = Math.max(this.epsilon - this.epsilonDecay, 0);
 
           if (this.visualize) this.mazeMatrixStore.createNewState(resetStartMatrix);
-          this.runMaze(resetStartMatrix, episodes - 1, qTable, train);
+          this.runMaze(resetStartMatrix, episodes - 1, qTable, train, visualizeTimeout);
         }
-      }, this.visualize ? this.visualizeTimeout : 0)
+      }, this.visualize ? visualizeTimeout : 0)
     } else {
       this.mazeMatrixStore.createNewState(startMatrix);
       this.mazeMatrixStore.setLoading(false);

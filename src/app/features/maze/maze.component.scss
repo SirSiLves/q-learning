@@ -5,13 +5,29 @@
     margin-bottom: 2rem;
   }
 
-  .episodes {
+  .numbers {
     display: flex;
-    flex-direction: column;
-    margin-top: 2rem;
+    flex-direction: row;
 
-    label {
-      margin-bottom: 0.25rem;
+    .episodes {
+      display: flex;
+      flex-direction: column;
+      margin-top: 2rem;
+      margin-right: 2rem;
+
+      label {
+        margin-bottom: 0.25rem;
+      }
+    }
+
+    .visualizeTimeout {
+      display: flex;
+      flex-direction: column;
+      margin-top: 2rem;
+
+      label {
+        margin-bottom: 0.25rem;
+      }
     }
   }
 

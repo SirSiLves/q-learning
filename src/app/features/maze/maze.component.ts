@@ -22,6 +22,7 @@ export class MazeComponent implements OnInit {
   qTable$ = this.mazeQTableQuery.select();
 
   episodes: number = 100;
+  visualizeTimeout: number = 100;
 
   modeOptions = [
     {label: 'Random', value: 'RND'},
@@ -49,18 +50,18 @@ export class MazeComponent implements OnInit {
     if (this.mode === 'RND') {
       this.matrixService.random(this.episodes, {
         id: guid(), state: MazeMatrixStore.initState, moves: 0, wins: 0, losses: 0, episode: 0
-      });
+      }, this.visualizeTimeout);
     } else if (this.mode === 'Q') {
       this.matrixService.qLearning(this.episodes, {
         id: guid(), state: MazeMatrixStore.initState, moves: 0, wins: 0, losses: 0, episode: 0
-      }, true);
+      }, true, this.visualizeTimeout);
     }
   }
 
   test(): void {
     this.matrixService.qLearning(this.episodes, {
       id: guid(), state: MazeMatrixStore.initState, moves: 0, wins: 0, losses: 0, episode: 0
-    }, false);
+    }, false, this.visualizeTimeout);
   }
 
   getQValue(xIndex: number, yIndex: number, action: number, qTable: MazeQTableModel, state: Elements[][]): string {
