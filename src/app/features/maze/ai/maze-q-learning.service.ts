@@ -19,7 +19,7 @@ export class MazeQLearningService {
   private alpha = 0.5; // a-learning rate between 0 and 1
   private gamma = 0.9; // y-discount factor between 0 and 1
   private epsilon = 0.9; // exploitation vs exploration between 0 and 1
-  private epsilonDecay = 0.001; // go slightly for more exploitation instead of exploration
+  private epsilonDecay = 0.01; // go slightly for more exploitation instead of exploration
   private epsilonDecrease = true; // go slightly for more exploitation instead of exploration
 
   // Rewards
